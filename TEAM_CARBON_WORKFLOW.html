@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Carbon — Simple SIH 2026 Project Workflow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-6 md:p-12">
+  <div class="max-w-4xl mx-auto space-y-10">
+    
+    <!-- Hero Header -->
+    <div class="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 shadow-2xl">
+      <div class="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-400 text-xs font-semibold mb-3">
+        🌿 Team Carbon &bull; SIH 2026 Hackathon Guide
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-white">
+        AegisBlue MRV: The 4-Step Plain English Workflow
+      </h1>
+      <p class="text-slate-300 mt-2 text-base">
+        A simple, easy-to-understand breakdown of what each member builds and how it connects together.
+      </p>
+    </div>
+
+    <!-- Big Picture Pipeline -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+      <h2 class="text-xl font-bold text-white mb-4">💡 The Whole Project in 4 Steps</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-slate-950 p-4 rounded-xl border border-blue-500/20">
+          <div class="text-2xl mb-1">🗺️</div>
+          <div class="font-bold text-blue-400 text-sm">Step 1: Map</div>
+          <div class="text-xs text-slate-400 mt-1">User draws boundary over mangrove forest</div>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/20">
+          <div class="text-2xl mb-1">🛰️</div>
+          <div class="font-bold text-emerald-400 text-sm">Step 2: Satellite</div>
+          <div class="text-xs text-slate-400 mt-1">Calculates NDVI & tons of CO2 stored</div>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-purple-500/20">
+          <div class="text-2xl mb-1">⛓️</div>
+          <div class="font-bold text-purple-400 text-sm">Step 3: Web3</div>
+          <div class="text-xs text-slate-400 mt-1">Mints CO2 tons as tokens on Polygon</div>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-cyan-500/20">
+          <div class="text-2xl mb-1">📊</div>
+          <div class="font-bold text-cyan-400 text-sm">Step 4: Market</div>
+          <div class="text-xs text-slate-400 mt-1">Companies buy, burn & download ESG PDF</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Members Sections -->
+    <div class="space-y-6">
+
+      <!-- Member 1 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-bold text-blue-400">🧑‍💻 Member 1: Map & GIS Lead</h3>
+          <span class="text-xs px-2.5 py-1 rounded bg-blue-500/10 text-blue-300 font-semibold">Pillar 1</span>
+        </div>
+        <p class="text-slate-300 text-sm mb-4">You build the registration map where users draw a polygon box around a coastal mangrove forest.</p>
+        <div class="bg-slate-950 p-4 rounded-xl text-xs space-y-2 text-slate-300 mb-4">
+          <div><strong class="text-white">Your Files:</strong> <code>src/components/Pillar1_Registration.tsx</code> & <code>src/services/spatialValidator.ts</code></div>
+          <div><strong class="text-white">What You Pass to Member 2:</strong> GPS Coordinates & Total Hectares</div>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs">
+          <a href="https://www.youtube.com/watch?v=290VgjkJogw" target="_blank" class="text-blue-400 hover:underline">📺 React Leaflet Maps Tutorial &rarr;</a>
+          <a href="https://www.youtube.com/watch?v=ls_EUE1QVPo" target="_blank" class="text-blue-400 hover:underline">📺 Drawing Polygons on Maps &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Member 2 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-bold text-emerald-400">🛰️ Member 2: Satellite MRV & Science Lead</h3>
+          <span class="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-300 font-semibold">Pillar 2</span>
+        </div>
+        <p class="text-slate-300 text-sm mb-4">You take the coordinates from Member 1 and calculate NDVI greenness and total CO2 storage.</p>
+        <div class="bg-slate-950 p-4 rounded-xl text-xs space-y-2 text-slate-300 mb-4">
+          <div><strong class="text-white">Your Files:</strong> <code>src/components/Pillar2_Auditing.tsx</code> & <code>src/services/satelliteAuditor.ts</code></div>
+          <div><strong class="text-white">What You Pass to Member 3:</strong> Total CO2 Tons (e.g. 124,716 tons) & Audit Fingerprint</div>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs">
+          <a href="https://www.youtube.com/watch?v=rxOM3hncu7M" target="_blank" class="text-emerald-400 hover:underline">📺 What is NDVI & Satellite Remote Sensing &rarr;</a>
+          <a href="https://www.youtube.com/watch?v=0wQv7n332Bw" target="_blank" class="text-emerald-400 hover:underline">📺 Sentinel-2 Satellite Bands &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Member 3 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-bold text-purple-400">⛓️ Member 3: Web3 & Blockchain Lead</h3>
+          <span class="text-xs px-2.5 py-1 rounded bg-purple-500/10 text-purple-300 font-semibold">Pillar 3</span>
+        </div>
+        <p class="text-slate-300 text-sm mb-4">You mint the verified CO2 tons as digital tokens on Polygon blockchain and store audit proof on IPFS.</p>
+        <div class="bg-slate-950 p-4 rounded-xl text-xs space-y-2 text-slate-300 mb-4">
+          <div><strong class="text-white">Your Files:</strong> <code>src/components/Pillar3_Tokenization.tsx</code> & <code>src/services/web3Registry.ts</code></div>
+          <div><strong class="text-white">What You Pass to Member 4:</strong> Minted Token ID & PolygonScan Transaction Hash</div>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs">
+          <a href="https://www.youtube.com/watch?v=gyMwXuJrbJQ" target="_blank" class="text-purple-400 hover:underline">📺 Carbon Credit Smart Contracts &rarr;</a>
+          <a href="https://www.youtube.com/watch?v=8wYd32lE7zY" target="_blank" class="text-purple-400 hover:underline">📺 Connecting MetaMask to React &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Member 4 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-lg font-bold text-cyan-400">📊 Member 4: Marketplace & Dashboard Lead</h3>
+          <span class="text-xs px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-300 font-semibold">Pillar 4</span>
+        </div>
+        <p class="text-slate-300 text-sm mb-4">You build the marketplace where companies buy and retire tokens and download an official ESG PDF certificate.</p>
+        <div class="bg-slate-950 p-4 rounded-xl text-xs space-y-2 text-slate-300 mb-4">
+          <div><strong class="text-white">Your Files:</strong> <code>src/components/Pillar4_Marketplace.tsx</code> & <code>src/services/certificateGenerator.ts</code></div>
+          <div><strong class="text-white">What You Deliver:</strong> Storefront, ESG Analytics & Verifiable PDF Certificate</div>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs">
+          <a href="https://www.youtube.com/watch?v=11090333555" target="_blank" class="text-cyan-400 hover:underline">📺 PDF Generation in React (jsPDF) &rarr;</a>
+          <a href="https://www.youtube.com/watch?v=F627pKNZfEU" target="_blank" class="text-cyan-400 hover:underline">📺 Dashboard UI in Tailwind CSS &rarr;</a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</body>
+</html>

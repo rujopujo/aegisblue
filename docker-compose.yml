@@ -1,0 +1,59 @@
+version: '3.8'
+
+# ==============================================================================
+# 🌿 Team Carbon (SIH 2026) - Multi-Member Docker Orchestration
+# ==============================================================================
+# This configuration unites all 4 members' deliverables into one seamless container stack.
+# Every teammate can either contribute directly to the unified frontend or connect
+# their own dedicated backend services via the shared bridge network.
+
+services:
+  # ----------------------------------------------------------------------------
+  # 🚀 CORE PLATFORM: Unified React + TypeScript Application
+  # Contains Member 1 (Map/GIS), Member 2 (MRV), Member 3 (Web3), Member 4 (Market)
+  # ----------------------------------------------------------------------------
+  aegisblue-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegisblue_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"       # Accessible in browser at http://localhost:3000
+    environment:
+      - NODE_ENV=production
+    networks:
+      - team-carbon-net
+
+  # ----------------------------------------------------------------------------
+  # 🐍 OPTIONAL: Python Satellite / Geospatial Backend (Member 2 or 1)
+  # If Member 1 or 2 builds an external Python API (FastAPI / Flask / GDAL),
+  # place their code in a "backend/" folder and uncomment this service block:
+  # ----------------------------------------------------------------------------
+  # satellite-backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: aegisblue_satellite_backend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:8000"
+  #   networks:
+  #     - team-carbon-net
+
+  # ----------------------------------------------------------------------------
+  # ⛓️ OPTIONAL: Local Blockchain Testnet Node (Member 3)
+  # If Member 3 runs a local Hardhat/Anvil node instead of Polygon Amoy testnet,
+  # uncomment this block:
+  # ----------------------------------------------------------------------------
+  # local-blockchain:
+  #   image: trufflesuite/ganache-cli:latest
+  #   container_name: aegisblue_blockchain
+  #   ports:
+  #     - "8545:8545"
+  #   networks:
+  #     - team-carbon-net
+
+networks:
+  team-carbon-net:
+    driver: bridge
