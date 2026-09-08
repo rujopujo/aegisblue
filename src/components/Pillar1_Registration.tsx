@@ -338,6 +338,26 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
                         <span>Spatial Confidence: <strong className="text-emerald-400">{boundaryResult.spatialConfidence}%</strong></span>
                         <span>Biome: <strong className="text-cyan-300">Intertidal Saline Wetland</strong></span>
                       </div>
+
+                      {/* Smithsonian CCN Soil Core Ground Truth Match */}
+                      {boundaryResult.nearestCcnCore && (
+                        <div className="mt-2 p-3 rounded-xl bg-cyan-950/60 border border-cyan-500/30 text-[11px] space-y-1">
+                          <div className="flex items-center justify-between text-cyan-300 font-bold">
+                            <span>🏛️ Smithsonian Coastal Carbon Network (CCN) Match</span>
+                            <span className="font-mono text-[10px] text-cyan-400 bg-cyan-900/60 px-2 py-0.5 rounded">
+                              {boundaryResult.nearestCcnCore.distanceKm} km away
+                            </span>
+                          </div>
+                          <div className="text-slate-200">
+                            Station: <span className="font-semibold text-white">{boundaryResult.nearestCcnCore.stationName}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 text-[10px] font-mono text-slate-400 pt-0.5">
+                            <span>Core ID: <strong className="text-cyan-300">{boundaryResult.nearestCcnCore.coreId}</strong></span>
+                            <span>Ground-Truth Soil Stock: <strong className="text-emerald-400">{boundaryResult.nearestCcnCore.soilCarbonStock_tC_ha} t C/ha</strong></span>
+                            <span>Depth: {boundaryResult.nearestCcnCore.samplingDepthCm} cm</span>
+                          </div>
+                        </div>
+                      )}
                       
                       <button
                         onClick={handleProceedToAuditing}

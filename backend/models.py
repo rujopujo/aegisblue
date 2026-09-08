@@ -19,10 +19,23 @@ class MangrovePolygon(BaseModel):
     areaHectares: float
     description: str
 
+class CcnCoreSampleInfo(BaseModel):
+    coreId: str
+    stationName: str
+    region: str
+    distanceKm: float
+    samplingDepthCm: float
+    soilCarbonStock_tC_ha: float
+    dominantSpecies: str
+    institution: str
+    doi: str
+    referenceDataset: str = "Smithsonian Coastal Carbon Network (CCN v2.1)"
+
 class BoundaryCheckResult(BaseModel):
     isValid: bool
     overlapPercentage: float
     matchedGmwZone: Optional[MangrovePolygon] = None
+    nearestCcnCore: Optional[CcnCoreSampleInfo] = None
     totalAreaHa: float
     warnings: List[str] = []
     rejectionReason: Optional[str] = None
@@ -42,6 +55,11 @@ class SatelliteBandData(BaseModel):
     cloudCoverPct: float
     acquisitionDate: str
     satellite: str = "Sentinel-2B"
+    sceneId: Optional[str] = None
+    platform: Optional[str] = "Sentinel-2B"
+    sunElevation: Optional[float] = None
+    thumbnailUrl: Optional[str] = None
+    telemetryMode: str = "LIVE_SENTINEL_STAC"
 
 class HistoricalTrendPoint(BaseModel):
     year: int
@@ -75,11 +93,13 @@ class SatelliteAuditRequest(BaseModel):
     coordinates: List[float]  # [lat, lng]
     areaHa: float = 120.5
     canopyDensityMultiplier: float = 0.82
+    boundingBox: Optional[BoundingBox] = None
 
 class SatelliteAuditResponse(BaseModel):
     spectralData: SatelliteBandData
     carbonMetrics: CarbonAuditMetrics
     heatmapGrid: List[NDVIHeatmapCell]
+    nearestCcnCore: Optional[CcnCoreSampleInfo] = None
 
 class IPFSMetaPayload(BaseModel):
     cid: str

@@ -1,8 +1,66 @@
 import math
+import os
+import json
 from datetime import datetime, timezone
 from typing import List, Tuple, Optional
 from shapely.geometry import Polygon, Point
-from models import BoundaryCheckResult, BoundingBox, MangrovePolygon
+from shapely.strtree import STRtree
+from models import BoundaryCheckResult, BoundingBox, MangrovePolygon, CcnCoreSampleInfo
+
+# ---------------------------------------------------------------------------
+# 🌿 Smithsonian Coastal Carbon Network (CCN) R-Tree Ground Truth Engine
+# ---------------------------------------------------------------------------
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+CCN_FILE_PATH = os.path.join(DATA_DIR, "ccn_coastal_cores.json")
+
+CCN_CORES_DATA = []
+CCN_POINTS = []
+CCN_TREE = None
+
+try:
+    if os.path.exists(CCN_FILE_PATH):
+        with open(CCN_FILE_PATH, "r", encoding="utf-8") as f:
+            CCN_CORES_DATA = json.load(f)
+            CCN_POINTS = [Point(core["longitude"], core["latitude"]) for core in CCN_CORES_DATA]
+            CCN_TREE = STRtree(CCN_POINTS)
+except Exception as e:
+    print(f"[Warning] Could not initialize Smithsonian CCN spatial tree: {e}")
+
+def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371.0  # Earth radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2.0) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2.0) ** 2)
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return round(R * c * 10.0) / 10.0
+
+def find_nearest_ccn_soil_core(lat: float, lng: float, max_dist_km: float = 250.0) -> Optional[CcnCoreSampleInfo]:
+    if not CCN_TREE or not CCN_CORES_DATA:
+        return None
+
+    query_pt = Point(lng, lat)
+    nearest_idx = CCN_TREE.nearest(query_pt)
+    if nearest_idx is None:
+        return None
+
+    matched_core = CCN_CORES_DATA[nearest_idx]
+    dist_km = haversine_distance_km(lat, lng, matched_core["latitude"], matched_core["longitude"])
+
+    # If within reasonable coastal radius (250km), attach ground-truth scientific metadata
+    if dist_km <= max_dist_km:
+        return CcnCoreSampleInfo(
+            coreId=matched_core["coreId"],
+            stationName=matched_core["stationName"],
+            region=matched_core["region"],
+            distanceKm=dist_km,
+            samplingDepthCm=matched_core["samplingDepthCm"],
+            soilCarbonStock_tC_ha=matched_core["soilCarbonStock_tC_ha"],
+            dominantSpecies=matched_core["dominantSpecies"],
+            institution=matched_core["institution"],
+            doi=matched_core["doi"]
+        )
+    return None
 
 # Official Global Mangrove Watch (GMW v3.0) Reference Zones
 GMW_REFERENCE_ZONES = [
@@ -200,12 +258,14 @@ def validate_boundary(coordinates: List[List[float]]) -> BoundaryCheckResult:
     warnings = []
     matched_zone_model = MangrovePolygon(**matched_zone_dict) if matched_zone_dict else None
     now_iso = datetime.now(timezone.utc).isoformat()
+    nearest_ccn_core = find_nearest_ccn_soil_core(centroid_lat, centroid_lng)
 
     if overlap_pct >= 75 and matched_zone_model:
         return BoundaryCheckResult(
             isValid=True,
             overlapPercentage=float(overlap_pct),
             matchedGmwZone=matched_zone_model,
+            nearestCcnCore=nearest_ccn_core,
             totalAreaHa=total_area_ha or 120.5,
             warnings=warnings,
             rejectionReason=None,
@@ -221,6 +281,7 @@ def validate_boundary(coordinates: List[List[float]]) -> BoundaryCheckResult:
             isValid=True,
             overlapPercentage=float(overlap_pct),
             matchedGmwZone=matched_zone_model,
+            nearestCcnCore=nearest_ccn_core,
             totalAreaHa=total_area_ha or 85.0,
             warnings=warnings,
             rejectionReason=None,
@@ -245,6 +306,7 @@ def validate_boundary(coordinates: List[List[float]]) -> BoundaryCheckResult:
             isValid=False,
             overlapPercentage=float(overlap_pct),
             matchedGmwZone=None,
+            nearestCcnCore=nearest_ccn_core,
             totalAreaHa=total_area_ha or 100.0,
             warnings=["CRITICAL: Failed GMW v3.0 validation gatekeeper."],
             rejectionReason=rejection_reason,

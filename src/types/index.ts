@@ -25,10 +25,24 @@ export interface PresetLocation {
   rejectionReason?: string;
 }
 
+export interface CcnCoreSampleInfo {
+  coreId: string;
+  stationName: string;
+  region: string;
+  distanceKm: number;
+  samplingDepthCm: number;
+  soilCarbonStock_tC_ha: number;
+  dominantSpecies: string;
+  institution: string;
+  doi: string;
+  referenceDataset?: string;
+}
+
 export interface BoundaryCheckResult {
   isValid: boolean;
   overlapPercentage: number;
   matchedGmwZone?: MangrovePolygon;
+  nearestCcnCore?: CcnCoreSampleInfo;
   totalAreaHa: number;
   warnings: string[];
   rejectionReason?: string;
@@ -50,7 +64,12 @@ export interface SatelliteBandData {
   band11_swir: number;  // 1610 nm
   cloudCoverPct: number;
   acquisitionDate: string;
-  satellite: 'Sentinel-2A' | 'Sentinel-2B' | 'Landsat-9';
+  satellite: string;
+  sceneId?: string;
+  platform?: string;
+  sunElevation?: number;
+  thumbnailUrl?: string;
+  telemetryMode?: 'LIVE_SENTINEL_STAC' | 'CALIBRATED_SIMULATION';
 }
 
 export interface CarbonAuditMetrics {

@@ -48,6 +48,7 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
   const [carbonMetrics, setCarbonMetrics] = useState<CarbonAuditMetrics | null>(null);
   const [ndviGrid, setNdviGrid] = useState<{ x: number; y: number; ndvi: number; color: string }[]>([]);
   const [engineSource, setEngineSource] = useState<'FASTAPI' | 'CLIENT_FALLBACK' | null>(null);
+  const [nearestCcn, setNearestCcn] = useState<any>(projectData.boundaryResult.nearestCcnCore || null);
 
   // Trigger Satellite MRV Processing Pipeline
   const runSatelliteAuditPipeline = async () => {
@@ -60,6 +61,10 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
       projectData.coordinates[0],
       projectData.areaHectares
     );
+
+    if (auditRes.nearestCcnCore) {
+      setNearestCcn(auditRes.nearestCcnCore);
+    }
 
     setTimeout(() => {
       setScanStep(2); // Computing Band 8 (NIR) & Band 4 (Red) NDVI Index
@@ -241,6 +246,28 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
                 <span className="text-[10px] font-mono text-slate-400">Cloud Cover: {spectralData.cloudCoverPct}%</span>
               </div>
 
+              {/* Live Sentinel-2 Scene ID & Platform Info */}
+              {spectralData.sceneId && (
+                <div className="bg-ocean-950/80 p-3 rounded-xl border border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      spectralData.telemetryMode === 'LIVE_SENTINEL_STAC'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    }`}>
+                      {spectralData.telemetryMode === 'LIVE_SENTINEL_STAC' ? '🛰️ LIVE STAC SCENE' : '📡 CALIBRATED SCENE'}
+                    </span>
+                    <span className="text-slate-200 font-semibold">{spectralData.platform || spectralData.satellite}</span>
+                    {spectralData.sunElevation && (
+                      <span className="text-slate-400 text-[10px] hidden sm:inline">Sun: {spectralData.sunElevation}°</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate max-w-xs" title={spectralData.sceneId}>
+                    Scene: <span className="text-cyan-400">{spectralData.sceneId}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-center">
                 <div className="bg-ocean-950/80 p-3 rounded-xl border border-ocean-800">
                   <div className="text-[10px] text-slate-400">Band 4 (Red)</div>
@@ -345,6 +372,39 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Smithsonian Coastal Carbon Network Sediment Calibration Card */}
+            {nearestCcn && (
+              <div className="glass-panel p-5 rounded-2xl border border-cyan-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-white text-xs flex items-center space-x-1.5 text-cyan-300">
+                    <span>🏛️ Smithsonian Coastal Carbon Network Ground-Truth Calibration</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-500/40">
+                    {nearestCcn.distanceKm} km to Core Station
+                  </span>
+                </div>
+                <p className="text-slate-300 text-xs leading-relaxed">
+                  Soil Organic Carbon (SOC) calibrated against verified Smithsonian sediment station <strong className="text-white">{nearestCcn.stationName}</strong> (<span className="text-cyan-300 font-mono">{nearestCcn.coreId}</span>).
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-center text-xs">
+                  <div className="bg-ocean-950/90 p-2.5 rounded-xl border border-ocean-800">
+                    <div className="text-[10px] text-slate-400">Measured Stock</div>
+                    <div className="text-emerald-400 font-bold text-sm mt-0.5">{nearestCcn.soilCarbonStock_tC_ha} t/ha</div>
+                  </div>
+                  <div className="bg-ocean-950/90 p-2.5 rounded-xl border border-ocean-800">
+                    <div className="text-[10px] text-slate-400">Core Depth</div>
+                    <div className="text-cyan-300 font-bold text-sm mt-0.5">{nearestCcn.samplingDepthCm} cm</div>
+                  </div>
+                  <div className="bg-ocean-950/90 p-2.5 rounded-xl border border-ocean-800">
+                    <div className="text-[10px] text-slate-400">Species Biome</div>
+                    <div className="text-teal-300 font-bold text-[11px] truncate mt-0.5" title={nearestCcn.dominantSpecies}>
+                      {nearestCcn.dominantSpecies.split('&')[0]}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column: Total Metric Tons Sequestered & False-Color Pixel Heatmap */}

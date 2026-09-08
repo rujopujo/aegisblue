@@ -4,7 +4,8 @@ import {
   SatelliteBandData,
   CarbonAuditMetrics,
   TokenizedProject,
-  RetirementRecord
+  RetirementRecord,
+  CcnCoreSampleInfo
 } from '../types';
 import { validateBoundaryAgainstGMW } from './spatialValidator';
 import { fetchSentinel2Data, computeCarbonAudit, generateNDVIGrid } from './satelliteAuditor';
@@ -115,11 +116,12 @@ export async function apiAuditSatellite(
   spectralData: SatelliteBandData;
   carbonMetrics: CarbonAuditMetrics;
   heatmapGrid: { x: number; y: number; ndvi: number; color: string }[];
+  nearestCcnCore?: CcnCoreSampleInfo;
   source: 'FASTAPI' | 'CLIENT_FALLBACK';
 }> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
 
     const res = await fetch(`${API_BASE}/api/satellite/audit`, {
       method: 'POST',
@@ -139,6 +141,7 @@ export async function apiAuditSatellite(
         spectralData: data.spectralData,
         carbonMetrics: data.carbonMetrics,
         heatmapGrid: data.heatmapGrid,
+        nearestCcnCore: data.nearestCcnCore,
         source: 'FASTAPI'
       };
     }

@@ -95,7 +95,8 @@ def run_satellite_audit(request: SatelliteAuditRequest):
     return perform_satellite_audit(
         coordinates=request.coordinates,
         area_ha=request.areaHa,
-        canopy_density_multiplier=request.canopyDensityMultiplier
+        canopy_density_multiplier=request.canopyDensityMultiplier,
+        bbox=request.boundingBox
     )
 
 @app.get("/api/projects", response_model=List[Dict[str, Any]])
