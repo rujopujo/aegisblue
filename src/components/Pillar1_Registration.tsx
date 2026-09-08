@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { LatLng, BoundaryCheckResult, PresetLocation } from '../types';
 import { PRESET_LOCATIONS } from '../data/gmwBoundaries';
-import { validateBoundaryAgainstGMW } from '../services/spatialValidator';
+import { apiValidateBoundary } from '../services/apiClient';
 import { MapComponent } from './MapComponent';
 
 interface Pillar1RegistrationProps {
@@ -52,12 +52,14 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
   const [selectedPreset, setSelectedPreset] = useState<string>('PRESET-SUN-01');
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [boundaryResult, setBoundaryResult] = useState<BoundaryCheckResult | null>(null);
+  const [engineSource, setEngineSource] = useState<'FASTAPI' | 'CLIENT_FALLBACK' | null>(null);
 
   // Quick preset loader
   const handleSelectPreset = (preset: PresetLocation) => {
     setSelectedPreset(preset.id);
     setCurrentCoords(preset.polygon.length > 0 ? preset.polygon : [preset.coordinates]);
     setBoundaryResult(null); // Reset check to let user trigger or test gatekeeper
+    setEngineSource(null);
     
     if (preset.type === 'mangrove') {
       setProjectName(`${preset.name} Blue Carbon Initiative`);
@@ -83,16 +85,16 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     setCurrentCoords(square);
     setSelectedPreset('');
     setBoundaryResult(null);
+    setEngineSource(null);
   };
 
   // Run Spatial Gatekeeper Verification
-  const runGatekeeperCheck = () => {
+  const runGatekeeperCheck = async () => {
     setIsChecking(true);
-    setTimeout(() => {
-      const result = validateBoundaryAgainstGMW(currentCoords);
-      setBoundaryResult(result);
-      setIsChecking(false);
-    }, 600);
+    const { result, source } = await apiValidateBoundary(currentCoords);
+    setBoundaryResult(result);
+    setEngineSource(source);
+    setIsChecking(false);
   };
 
   const handleProceedToAuditing = () => {
@@ -312,6 +314,20 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
                       {boundaryResult.overlapPercentage}% GMW Overlap
                     </span>
                   </div>
+
+                  {engineSource && (
+                    <div className="flex items-center space-x-2 text-[10px] font-mono">
+                      {engineSource === 'FASTAPI' ? (
+                        <span className="inline-flex items-center text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                          ⚡ Verified by Python FastAPI (Shapely GMW Gatekeeper)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded">
+                          🛡️ Verified by Client-Side Spatial Engine
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {boundaryResult.isValid ? (
                     <div className="text-xs text-slate-300 space-y-1.5">

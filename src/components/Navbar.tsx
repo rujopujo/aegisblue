@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ShieldCheck, 
   Satellite, 
@@ -10,6 +10,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { POLYGON_AMOY_CONFIG } from '../services/web3Registry';
+import { checkBackendHealth, subscribeToBackendStatus, BackendStatus } from '../services/apiClient';
 
 interface NavbarProps {
   activeTab: 'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard';
@@ -32,6 +33,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   totalTokensMinted,
   totalRetiredTons,
 }) => {
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>({ isOnline: false });
+
+  useEffect(() => {
+    checkBackendHealth();
+    const unsub = subscribeToBackendStatus(setBackendStatus);
+    const interval = setInterval(() => checkBackendHealth(), 8000);
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       {/* Top Institutional Header Bar */}
@@ -171,8 +184,35 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </nav>
 
-        {/* Corporate Wallet Connector */}
-        <div className="flex items-center space-x-3">
+        {/* Backend & Corporate Wallet Connectors */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {backendStatus.isOnline ? (
+            <a
+              href="http://localhost:8000/docs"
+              target="_blank"
+              rel="noreferrer"
+              title="FastAPI Python MRV Backend Online! Click to view interactive Swagger Docs."
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors shadow-sm"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="hidden sm:inline">FastAPI</span>
+              <span>MRV Active</span>
+              <ExternalLink className="w-3 h-3 opacity-60 ml-0.5" />
+            </a>
+          ) : (
+            <div
+              title="Running in Standalone Client Mode. Automatic client-side MRV engine is active."
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span className="hidden sm:inline">Client Mode</span>
+              <span className="sm:hidden">Client</span>
+            </div>
+          )}
+
           <button
             onClick={onConnectWallet}
             className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#002B49] hover:bg-[#003B66] text-white text-xs font-mono font-semibold shadow-sm transition-all"

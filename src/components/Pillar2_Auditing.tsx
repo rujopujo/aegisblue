@@ -19,11 +19,7 @@ import {
   CarbonAuditMetrics, 
   BoundaryCheckResult 
 } from '../types';
-import { 
-  fetchSentinel2Data, 
-  computeCarbonAudit, 
-  generateNDVIGrid 
-} from '../services/satelliteAuditor';
+import { apiAuditSatellite } from '../services/apiClient';
 
 interface Pillar2AuditingProps {
   projectData: {
@@ -51,31 +47,36 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
   const [spectralData, setSpectralData] = useState<SatelliteBandData | null>(null);
   const [carbonMetrics, setCarbonMetrics] = useState<CarbonAuditMetrics | null>(null);
   const [ndviGrid, setNdviGrid] = useState<{ x: number; y: number; ndvi: number; color: string }[]>([]);
+  const [engineSource, setEngineSource] = useState<'FASTAPI' | 'CLIENT_FALLBACK' | null>(null);
 
   // Trigger Satellite MRV Processing Pipeline
-  const runSatelliteAuditPipeline = () => {
+  const runSatelliteAuditPipeline = async () => {
     setIsScanning(true);
     setScanStep(1); // Fetching Sentinel-2 Multi-Spectral Bands
     setCarbonMetrics(null);
 
+    // Call Python FastAPI backend (or fallback to client engine)
+    const auditRes = await apiAuditSatellite(
+      projectData.coordinates[0],
+      projectData.areaHectares
+    );
+
     setTimeout(() => {
       setScanStep(2); // Computing Band 8 (NIR) & Band 4 (Red) NDVI Index
-      const spectral = fetchSentinel2Data(projectData.coordinates[0], projectData.areaHectares);
-      setSpectralData(spectral);
-    }, 900);
+      setSpectralData(auditRes.spectralData);
+    }, 800);
 
     setTimeout(() => {
       setScanStep(3); // Running Allometric Carbon Sequestration Equations (AGB + BGB + SOC)
-    }, 1800);
+    }, 1600);
 
     setTimeout(() => {
-      const spectral = spectralData || fetchSentinel2Data(projectData.coordinates[0], projectData.areaHectares);
-      const audit = computeCarbonAudit(spectral, projectData.areaHectares);
-      setCarbonMetrics(audit);
-      setNdviGrid(generateNDVIGrid(audit.ndvi));
+      setCarbonMetrics(auditRes.carbonMetrics);
+      setNdviGrid(auditRes.heatmapGrid);
+      setEngineSource(auditRes.source);
       setScanStep(4); // Audit Completed & Tamper-proof Hash Generated
       setIsScanning(false);
-    }, 2800);
+    }, 2400);
   };
 
   useEffect(() => {
@@ -218,10 +219,25 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
             {/* Spectral Reflectance Cards */}
             <div className="glass-panel p-6 rounded-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-ocean-800 pb-3">
-                <h3 className="font-bold text-white text-sm flex items-center space-x-2">
-                  <Satellite className="w-4 h-4 text-cyan-400" />
-                  <span>Sentinel-2 Spectral Reflectance Bands</span>
-                </h3>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-white text-sm flex items-center space-x-2">
+                    <Satellite className="w-4 h-4 text-cyan-400" />
+                    <span>Sentinel-2 Spectral Reflectance Bands</span>
+                  </h3>
+                  {engineSource && (
+                    <div className="text-[10px] font-mono">
+                      {engineSource === 'FASTAPI' ? (
+                        <span className="text-emerald-400 bg-emerald-950/70 border border-emerald-500/30 px-2 py-0.5 rounded inline-flex items-center space-x-1">
+                          <span>⚡ Telemetry Processed via Python FastAPI</span>
+                        </span>
+                      ) : (
+                        <span className="text-amber-300 bg-amber-950/70 border border-amber-500/30 px-2 py-0.5 rounded inline-flex items-center space-x-1">
+                          <span>🛡️ Telemetry Processed via Client MRV Engine</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <span className="text-[10px] font-mono text-slate-400">Cloud Cover: {spectralData.cloudCoverPct}%</span>
               </div>
 

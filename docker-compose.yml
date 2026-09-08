@@ -24,20 +24,22 @@ services:
       - team-carbon-net
 
   # ----------------------------------------------------------------------------
-  # 🐍 OPTIONAL: Python Satellite / Geospatial Backend (Member 2 or 1)
-  # If Member 1 or 2 builds an external Python API (FastAPI / Flask / GDAL),
-  # place their code in a "backend/" folder and uncomment this service block:
+  # 🐍 Python Satellite & Geospatial MRV Backend (FastAPI + Shapely + SQLite)
   # ----------------------------------------------------------------------------
-  # satellite-backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: aegisblue_satellite_backend
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8000:8000"
-  #   networks:
-  #     - team-carbon-net
+  satellite-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aegisblue_satellite_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"     # REST API & Swagger docs at http://localhost:8000/docs
+    environment:
+      - AEGISBLUE_DB_PATH=/app/data/aegisblue.db
+    volumes:
+      - backend-data:/app/data
+    networks:
+      - team-carbon-net
 
   # ----------------------------------------------------------------------------
   # ⛓️ OPTIONAL: Local Blockchain Testnet Node (Member 3)
@@ -55,3 +57,7 @@ services:
 networks:
   team-carbon-net:
     driver: bridge
+
+volumes:
+  backend-data:
+

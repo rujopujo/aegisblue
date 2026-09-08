@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { BCI_Homepage } from './components/BCI_Homepage';
 import { Pillar1_Registration } from './components/Pillar1_Registration';
@@ -16,6 +16,7 @@ import {
   RetirementRecord 
 } from './types';
 import { initializeMockProjects, INITIAL_RETIREMENTS } from './data/mockProjects';
+import { apiFetchProjects, apiSaveProject } from './services/apiClient';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard'>('home');
@@ -44,6 +45,19 @@ export function App() {
   // Global Project & Retirement Registry
   const [projects, setProjects] = useState<TokenizedProject[]>(() => initializeMockProjects());
   const [retirements, setRetirements] = useState<RetirementRecord[]>(() => INITIAL_RETIREMENTS);
+
+  // Sync with Python FastAPI backend if available
+  useEffect(() => {
+    const initial = initializeMockProjects();
+    apiFetchProjects(initial).then(({ projects: serverProjects, source }) => {
+      if (source === 'FASTAPI' && serverProjects && serverProjects.length > 0) {
+        setProjects(serverProjects);
+      } else if (source === 'FASTAPI' && (!serverProjects || serverProjects.length === 0)) {
+        // Seed default projects to backend SQLite database
+        initial.forEach((p) => apiSaveProject(p));
+      }
+    });
+  }, []);
 
   // ESG Certificate Modal State
   const [selectedRetirement, setSelectedRetirement] = useState<RetirementRecord | null>(null);
@@ -84,6 +98,7 @@ export function App() {
 
   const handleTokenized = (newProject: TokenizedProject) => {
     setProjects((prev) => [newProject, ...prev]);
+    apiSaveProject(newProject);
     setActiveTab('pillar4'); // Move to Marketplace
   };
 
@@ -92,6 +107,7 @@ export function App() {
       prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
     );
     setRetirements((prev) => [record, ...prev]);
+    apiSaveProject(updatedProject);
   };
 
   const handleOpenCertificate = (record: RetirementRecord) => {

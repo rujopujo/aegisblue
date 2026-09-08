@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { TokenizedProject, RetirementRecord } from '../types';
-import { executeTokenRetirement } from '../services/web3Registry';
+import { apiRetireCredits } from '../services/apiClient';
 
 interface Pillar4MarketplaceProps {
   projects: TokenizedProject[];
@@ -43,40 +43,38 @@ export const Pillar4_Marketplace: React.FC<Pillar4MarketplaceProps> = ({
     setRetireAmount(Math.min(500, project.tokenization.availableCredits));
   };
 
-  const handleConfirmRetirement = () => {
+  const handleConfirmRetirement = async () => {
     if (!selectedProject || retireAmount <= 0) return;
 
     setIsRetiring(true);
 
-    setTimeout(() => {
-      try {
-        const { updatedProject, retirementRecord } = executeTokenRetirement(
-          selectedProject,
-          retireAmount,
-          companyName,
-          companyWallet,
-          purpose
-        );
+    try {
+      const { updatedProject, retirementRecord } = await apiRetireCredits(
+        selectedProject,
+        retireAmount,
+        companyName,
+        companyWallet,
+        purpose
+      );
 
-        onRetireCredits(updatedProject, retirementRecord);
-        setIsRetiring(false);
-        setSelectedProject(null);
+      onRetireCredits(updatedProject, retirementRecord);
+      setIsRetiring(false);
+      setSelectedProject(null);
 
-        // Celebration Confetti
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.5 },
-          colors: ['#06b6d4', '#10b981', '#fbbf24', '#ffffff'],
-        });
+      // Celebration Confetti
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.5 },
+        colors: ['#06b6d4', '#10b981', '#fbbf24', '#ffffff'],
+      });
 
-        // Automatically open the verified ESG certificate
-        onOpenCertificate(retirementRecord);
-      } catch (err: any) {
-        alert(err.message);
-        setIsRetiring(false);
-      }
-    }, 1600);
+      // Automatically open the verified ESG certificate
+      onOpenCertificate(retirementRecord);
+    } catch (err: any) {
+      alert(err.message || 'Retirement failed');
+      setIsRetiring(false);
+    }
   };
 
   return (
