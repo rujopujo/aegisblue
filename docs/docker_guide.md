@@ -7,8 +7,6 @@
 
 Docker guarantees that when you merge your team's code, it will run identically on **every laptop** without errors or missing packages.
 
-There are **two ways** your teammates might write their files. Docker is configured to support both:
-
 ---
 
 ## 🎯 Case 1: All 4 Members Build Inside This Frontend (Recommended)
@@ -26,13 +24,14 @@ Because each teammate is assigned their own separate files, you will **never** o
 ### 🔄 How to Integrate in 3 Steps:
 1. **Teammates clone the repository:**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/rujopujo/aegisblue.git
+   cd aegisblue
    ```
 2. **Each member works on their branch and pushes their changes:**
-   - Member 1: `git checkout -b member-1-gis`
-   - Member 2: `git checkout -b member-2-satellite`
-   - Member 3: `git checkout -b member-3-web3`
-   - Member 4: `git checkout -b member-4-marketplace`
+   - Member 1: `git checkout -b feature/pillar-1-spatial`
+   - Member 2: `git checkout -b feature/pillar-2-satellite-mrv`
+   - Member 3: `git checkout -b feature/pillar-3-web3-tokens`
+   - Member 4: `git checkout -b feature/pillar-4-marketplace-esg`
 3. **Merge everyone into `main` and run Docker:**
    ```bash
    docker compose up --build -d
@@ -45,7 +44,7 @@ Because each teammate is assigned their own separate files, you will **never** o
 
 What if Member 2 or Member 1 decides to write a standalone **Python FastAPI / Flask** service for heavy satellite imagery or AI models?
 
-Our `docker-compose.yml` is already prepared for this!
+Our `docker-compose.yml` is already prepared for this:
 
 1. Tell your friend to create a folder called `backend/` in the project root:
    ```
@@ -54,11 +53,11 @@ Our `docker-compose.yml` is already prepared for this!
    │   ├── main.py
    │   ├── requirements.txt
    │   └── Dockerfile
+   ├── docker/                <-- Dockerfile and nginx.conf
    ├── src/                   <-- React frontend (Pillars 1, 2, 3, 4)
-   ├── Dockerfile
    └── docker-compose.yml
    ```
-2. In `backend/Dockerfile`, they just add:
+2. In `backend/Dockerfile`, they add:
    ```dockerfile
    FROM python:3.11-slim
    WORKDIR /app
@@ -68,12 +67,12 @@ Our `docker-compose.yml` is already prepared for this!
    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
    ```
 3. Open `docker-compose.yml` and **uncomment** the `satellite-backend` block.
-4. Run `docker compose up --build`.  
-   Now Docker spins up **both** the frontend (port `3000`) and the Python backend (port `8000`) together on the same private internal network!
+4. Run `docker compose up --build -d`.  
+   Docker spins up **both** the frontend (port `3000`) and the Python backend (port `8000`) together on the same private internal network!
 
 ---
 
-## ⚡ Quick Cheat-Sheet for Presentation Day
+## ⚡ Quick Cheat-Sheet
 
 | Action | Command |
 | :--- | :--- |
@@ -81,7 +80,7 @@ Our `docker-compose.yml` is already prepared for this!
 | **Open the app** | Open browser to `http://localhost:3000` |
 | **View real-time logs** | `docker compose logs -f` |
 | **Stop everything** | `docker compose down` |
-| **Wipe cache & force fresh rebuild** | `docker compose build --no-cache` |
+| **Force fresh rebuild without cache** | `docker compose build --no-cache` |
 
 ---
 
