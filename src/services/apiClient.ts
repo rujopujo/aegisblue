@@ -11,8 +11,8 @@ import { validateBoundaryAgainstGMW } from './spatialValidator';
 import { fetchSentinel2Data, computeCarbonAudit, generateNDVIGrid } from './satelliteAuditor';
 import { executeTokenRetirement } from './web3Registry';
 
-// Automatically detect API host: direct port 8000 in dev, or /api reverse-proxy in Docker
-const API_BASE = window.location.port === '3000' ? '' : 'http://localhost:8000';
+// In local development and Docker, FastAPI is reached at http://localhost:8000 (with fallback to proxy)
+const API_BASE = 'http://localhost:8000';
 
 export interface BackendStatus {
   isOnline: boolean;
@@ -40,33 +40,44 @@ function notifyListeners(status: BackendStatus) {
 }
 
 /**
- * Pings Python FastAPI backend health check with 2s timeout
+ * Pings Python FastAPI backend health check with 2.5s timeout
  */
 export async function checkBackendHealth(): Promise<BackendStatus> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000);
+  const candidates = ['http://localhost:8000/health', '/health'];
 
-  try {
-    const res = await fetch(`${API_BASE}/health`, {
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' }
-    });
-    clearTimeout(timeoutId);
+  for (const url of candidates) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    if (res.ok) {
-      const data = await res.json();
-      const status: BackendStatus = {
-        isOnline: true,
-        serviceName: data.service || 'AegisBlue Python MRV',
-        version: data.version || '1.0.0',
-        timestamp: data.timestamp,
-        capabilities: data.capabilities || []
-      };
-      notifyListeners(status);
-      return status;
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          if (data && data.status === 'HEALTHY') {
+            const status: BackendStatus = {
+              isOnline: true,
+              serviceName: data.service || 'AegisBlue Python MRV',
+              version: data.version || '1.0.0',
+              timestamp: data.timestamp,
+              capabilities: data.capabilities || []
+            };
+            notifyListeners(status);
+            return status;
+          }
+        } catch (_jsonErr) {
+          // Not valid JSON (e.g. dev server HTML)
+        }
+      }
+    } catch (_err) {
+      // Continue to next candidate
     }
-  } catch (_err) {
-    clearTimeout(timeoutId);
   }
 
   const offlineStatus: BackendStatus = { isOnline: false };
