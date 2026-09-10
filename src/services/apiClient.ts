@@ -5,6 +5,7 @@ import {
   CarbonAuditMetrics,
   TokenizedProject,
   RetirementRecord,
+  CertificateVerificationResult,
   CcnCoreSampleInfo
 } from '../types';
 import { validateBoundaryAgainstGMW } from './spatialValidator';
@@ -459,5 +460,52 @@ export async function apiPinAuditDossier(
   }
 
   return await res.json();
+}
+
+/**
+ * Queries the authoritative backend registry for certificate details by certificateId.
+ * Strictly read-only; never mutates blockchain state.
+ */
+export async function apiVerifyCertificate(
+  certificateId: string
+): Promise<{
+  success: boolean;
+  data?: CertificateVerificationResult;
+  status: number;
+  error?: string;
+}> {
+  const cleanId = (certificateId || '').trim();
+  if (!cleanId) {
+    return {
+      success: false,
+      status: 400,
+      error: 'Certificate ID cannot be empty.',
+    };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/verify/${encodeURIComponent(cleanId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        data,
+        status: res.status,
+      };
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    return {
+      success: false,
+      status: res.status,
+      error: errData.detail || `Certificate verification failed with HTTP ${res.status}.`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      status: 503,
+      error: err?.message || 'Unable to reach the AegisBlue verification registry service.',
+    };
+  }
 }
 

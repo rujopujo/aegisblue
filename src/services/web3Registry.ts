@@ -820,3 +820,190 @@ export function executeTokenRetirement(
 
   return { updatedProject, retirementRecord };
 }
+
+export interface OnChainVerificationResult {
+  verified: boolean;
+  status: 'VERIFIED_ON_CHAIN' | 'RPC_UNAVAILABLE' | 'NOT_FOUND' | 'REVERTED' | 'EVENT_MISMATCH';
+  blockNumber?: number;
+  confirmations?: number;
+  eventDetails?: {
+    account: string;
+    tokenId: string;
+    amount: number;
+  };
+  contractAddress: string;
+  transactionHash: string;
+  errorMessage?: string;
+}
+
+/**
+ * Performs a read-only cryptographic verification of a retirement transaction against Polygon Amoy.
+ * Strictly verifies receipt status, contract interaction, and CarbonCreditsRetired event emission.
+ * NEVER sends any transaction.
+ */
+export async function verifyOnChainRetirement(params: {
+  transactionHash: string;
+  tokenId?: string;
+  amount?: number;
+  wallet?: string;
+}): Promise<OnChainVerificationResult> {
+  const cleanTxHash = (params.transactionHash || '').trim();
+  const contractAddress = POLYGON_AMOY_CONFIG.contractAddress;
+
+  if (!cleanTxHash.startsWith('0x') || cleanTxHash.length !== 66) {
+    return {
+      verified: false,
+      status: 'NOT_FOUND',
+      contractAddress,
+      transactionHash: cleanTxHash,
+      errorMessage: 'Invalid or missing Ethereum transaction hash (must be 66 characters hex).',
+    };
+  }
+
+  try {
+    const provider = getReadonlyProvider();
+    const contract = getContract(provider);
+
+    // 1. Fetch transaction receipt
+    const receipt = await provider.getTransactionReceipt(cleanTxHash);
+    if (!receipt) {
+      return {
+        verified: false,
+        status: 'NOT_FOUND',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        errorMessage: 'Transaction not found on Polygon Amoy testnet. It may still be pending or was not broadcast.',
+      };
+    }
+
+    // 2. Check receipt status
+    if (receipt.status !== 1) {
+      return {
+        verified: false,
+        status: 'REVERTED',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        errorMessage: 'Transaction reverted on-chain on Polygon Amoy.',
+      };
+    }
+
+    // 3. Verify interaction with AegisBlue smart contract
+    const receiptTo = (receipt.to || '').toLowerCase();
+    if (receiptTo !== contractAddress.toLowerCase()) {
+      return {
+        verified: false,
+        status: 'EVENT_MISMATCH',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        errorMessage: `Transaction interacted with contract ${receipt.to}, not the AegisBlue contract ${contractAddress}.`,
+      };
+    }
+
+    // 4. Parse transaction logs for CarbonCreditsRetired event
+    let retiredEventFound = false;
+    let eventAccount = '';
+    let eventTokenId = '';
+    let eventAmount = 0;
+
+    for (const log of receipt.logs) {
+      try {
+        if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
+          const parsed = contract.interface.parseLog({
+            topics: [...log.topics],
+            data: log.data,
+          });
+
+          if (parsed && parsed.name === 'CarbonCreditsRetired') {
+            retiredEventFound = true;
+            eventAccount = (parsed.args.account || parsed.args[0] || '').toString();
+            eventTokenId = (parsed.args.tokenId || parsed.args[1] || '').toString();
+            eventAmount = Number(parsed.args.amount || parsed.args[2] || 0);
+            break;
+          }
+        }
+      } catch (_logErr) {
+        // Not an event matching this interface fragment; continue
+      }
+    }
+
+    if (!retiredEventFound) {
+      return {
+        verified: false,
+        status: 'EVENT_MISMATCH',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        errorMessage: 'Transaction executed successfully but did not emit the CarbonCreditsRetired event on AegisBlue contract.',
+      };
+    }
+
+    // 5. If specific criteria were provided, verify they align
+    if (params.tokenId && eventTokenId !== params.tokenId.toString()) {
+      return {
+        verified: false,
+        status: 'EVENT_MISMATCH',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        eventDetails: { account: eventAccount, tokenId: eventTokenId, amount: eventAmount },
+        errorMessage: `Token ID mismatch: expected ${params.tokenId}, on-chain record states ${eventTokenId}.`,
+      };
+    }
+
+    if (params.amount !== undefined && params.amount > 0 && eventAmount !== params.amount) {
+      return {
+        verified: false,
+        status: 'EVENT_MISMATCH',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        eventDetails: { account: eventAccount, tokenId: eventTokenId, amount: eventAmount },
+        errorMessage: `Amount mismatch: expected ${params.amount} t, on-chain record states ${eventAmount} t.`,
+      };
+    }
+
+    if (params.wallet && eventAccount.toLowerCase() !== params.wallet.toLowerCase()) {
+      return {
+        verified: false,
+        status: 'EVENT_MISMATCH',
+        contractAddress,
+        transactionHash: cleanTxHash,
+        blockNumber: receipt.blockNumber,
+        eventDetails: { account: eventAccount, tokenId: eventTokenId, amount: eventAmount },
+        errorMessage: `Beneficiary wallet mismatch: expected ${params.wallet}, on-chain record states ${eventAccount}.`,
+      };
+    }
+
+    let confirmations = 1;
+    try {
+      const currentBlock = await provider.getBlockNumber();
+      confirmations = Math.max(1, currentBlock - receipt.blockNumber + 1);
+    } catch (_cErr) {
+      // Non-critical
+    }
+
+    return {
+      verified: true,
+      status: 'VERIFIED_ON_CHAIN',
+      blockNumber: receipt.blockNumber,
+      confirmations,
+      contractAddress,
+      transactionHash: cleanTxHash,
+      eventDetails: {
+        account: eventAccount,
+        tokenId: eventTokenId,
+        amount: eventAmount,
+      },
+    };
+  } catch (err: any) {
+    return {
+      verified: false,
+      status: 'RPC_UNAVAILABLE',
+      contractAddress,
+      transactionHash: cleanTxHash,
+      errorMessage: err?.message || 'Polygon Amoy RPC node connection error or timeout.',
+    };
+  }
+}

@@ -16,12 +16,14 @@ interface EnterpriseDashboardProps {
   retirements: RetirementRecord[];
   projects: TokenizedProject[];
   onOpenCertificate: (record: RetirementRecord) => void;
+  onNavigateVerify?: (certificateId: string) => void;
 }
 
 export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
   retirements,
   projects,
   onOpenCertificate,
+  onNavigateVerify,
 }) => {
   const totalRetiredTons = retirements.reduce((acc, curr) => acc + curr.tonsRetired, 0);
   const totalHectaresProtected = Math.round(totalRetiredTons / 18.5);
@@ -187,7 +189,9 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
                             <ExternalLink className="w-3 h-3 shrink-0" />
                           </a>
                         ) : (
-                          <span className="text-slate-500">Off-Chain</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                            Off-Chain Record
+                          </span>
                         )}
                         {rec.burnReceiptBlock > 0 && (
                           <div className="text-[9px] text-slate-400 mt-0.5">
@@ -199,13 +203,22 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
                       <td className="py-4 text-right space-x-2 whitespace-nowrap">
                         <button
                           onClick={() => onOpenCertificate(rec)}
-                          className="px-3 py-1.5 rounded-lg bg-ocean-800 hover:bg-ocean-700 text-cyan-300 text-xs font-semibold border border-ocean-700 transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-ocean-800 hover:bg-ocean-700 text-cyan-300 text-xs font-semibold border border-ocean-700 transition-colors"
                         >
                           View
                         </button>
+                        {onNavigateVerify && (
+                          <button
+                            onClick={() => onNavigateVerify(rec.certificateId)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 text-xs font-semibold border border-emerald-500/40 transition-colors"
+                            title="Verify on public portal"
+                          >
+                            Verify
+                          </button>
+                        )}
                         <button
                           onClick={() => downloadESGCertificatePDF(rec, proj)}
-                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold transition-all shadow-sm"
+                          className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold transition-all shadow-sm"
                         >
                           PDF
                         </button>

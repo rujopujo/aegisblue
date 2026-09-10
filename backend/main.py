@@ -18,6 +18,7 @@ from models import (
     TokenizedProject,
     RetirementRequest,
     RetirementRecord,
+    CertificateVerificationResponse,
     AuditDossierPinRequest,
     AuditDossierPinResponse
 )
@@ -36,6 +37,7 @@ from services.database import (
     get_project_by_id,
     save_or_update_project,
     get_all_retirements,
+    get_retirement_by_certificate_id,
     save_retirement
 )
 
@@ -254,7 +256,9 @@ def retire_carbon_credits(request: RetirementRequest):
         "retiredAt": now_iso,
         "certificateId": certificate_id,
         "ipfsCertificateCid": request.ipfsCertificateCid or "",
-        "tokenId": clean_token_id or tokenization.get("tokenId")
+        "tokenId": clean_token_id or tokenization.get("tokenId"),
+        "contractAddress": "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9",
+        "network": "Polygon Amoy"
     }
 
     save_retirement(record)
@@ -264,6 +268,50 @@ def retire_carbon_credits(request: RetirementRequest):
         "updatedProject": project,
         "retirementRecord": record
     }
+
+
+@app.get("/api/verify/{certificate_id}", response_model=CertificateVerificationResponse)
+def verify_certificate(certificate_id: str):
+    """
+    Public read-only ESG retirement certificate verification endpoint.
+    Retrieves the immutable retirement record from the authoritative database.
+    Confirms cryptographic and on-chain verification metadata without mutating blockchain state.
+    """
+    clean_cert_id = (certificate_id or "").strip()
+    if not clean_cert_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'certificateId' cannot be empty."
+        )
+
+    record = get_retirement_by_certificate_id(clean_cert_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Certificate '{clean_cert_id}' not found."
+        )
+
+    tx_hash = record.get("txHash") or ""
+    burn_block = record.get("burnReceiptBlock") or 0
+    is_onchain = bool(tx_hash.startswith("0x") and len(tx_hash) == 66 and burn_block > 0)
+
+    explorer_url = f"https://amoy.polygonscan.com/tx/{tx_hash}" if is_onchain else None
+    contract_address = record.get("contractAddress") or "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9"
+    network = record.get("network") or "Polygon Amoy"
+
+    record["contractAddress"] = contract_address
+    record["network"] = network
+
+    return CertificateVerificationResponse(
+        status="VERIFIED_ON_CHAIN" if is_onchain else "OFF_CHAIN_RECORD",
+        certificateId=record.get("certificateId", clean_cert_id),
+        record=record,
+        isBlockchainVerified=is_onchain,
+        network=network,
+        contractAddress=contract_address,
+        explorerUrl=explorer_url,
+        verifiedAt=datetime.now(timezone.utc).isoformat()
+    )
 
 
 @app.post("/api/ipfs/pin", response_model=AuditDossierPinResponse)

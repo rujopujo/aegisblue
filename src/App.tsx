@@ -7,6 +7,7 @@ import { Pillar3_Tokenization } from './components/Pillar3_Tokenization';
 import { Pillar4_Marketplace } from './components/Pillar4_Marketplace';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { ESGCertificateModal } from './components/ESGCertificateModal';
+import { VerificationPage } from './components/VerificationPage';
 import { 
   LatLng, 
   BoundaryCheckResult, 
@@ -27,6 +28,54 @@ import {
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard'>('home');
+  const [verificationCertId, setVerificationCertId] = useState<string | null>(null);
+
+  // Synchronize browser URL route for /verify/:certificateId
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      const pathname = window.location.pathname;
+      const match = pathname.match(/^\/verify\/([^/]+)/i);
+      if (match && match[1]) {
+        setVerificationCertId(decodeURIComponent(match[1]));
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const verifyParam = params.get('verify');
+      if (verifyParam) {
+        setVerificationCertId(verifyParam);
+        return;
+      }
+
+      const hash = window.location.hash;
+      const hashMatch = hash.match(/^#\/?verify\/([^/]+)/i);
+      if (hashMatch && hashMatch[1]) {
+        setVerificationCertId(decodeURIComponent(hashMatch[1]));
+        return;
+      }
+
+      setVerificationCertId(null);
+    };
+
+    handleUrlRoute();
+    window.addEventListener('popstate', handleUrlRoute);
+    window.addEventListener('hashchange', handleUrlRoute);
+    return () => {
+      window.removeEventListener('popstate', handleUrlRoute);
+      window.removeEventListener('hashchange', handleUrlRoute);
+    };
+  }, []);
+
+  const handleNavigateVerify = (certId: string) => {
+    setVerificationCertId(certId);
+    window.history.pushState({}, '', `/verify/${encodeURIComponent(certId)}`);
+  };
+
+  const handleBackFromVerify = () => {
+    setVerificationCertId(null);
+    window.history.pushState({}, '', '/');
+    setActiveTab('dashboard');
+  };
   
   // Real Web3 Wallet State
   const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
@@ -236,6 +285,15 @@ export function App() {
     },
   };
 
+  if (verificationCertId) {
+    return (
+      <VerificationPage
+        certificateId={verificationCertId}
+        onBackToApp={handleBackFromVerify}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
       {/* Clean Institutional Top Header */}
@@ -340,6 +398,7 @@ export function App() {
               retirements={retirements}
               projects={projects}
               onOpenCertificate={handleOpenCertificate}
+              onNavigateVerify={handleNavigateVerify}
             />
           </div>
         )}
@@ -351,6 +410,7 @@ export function App() {
         project={projects.find((p) => p.id === selectedRetirement?.projectId)}
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
+        onNavigateVerify={handleNavigateVerify}
       />
 
       {/* Institutional Editorial Footer */}

@@ -152,6 +152,18 @@ class RetirementRecord(BaseModel):
     certificateId: str
     ipfsCertificateCid: str
     tokenId: Optional[str] = None
+    contractAddress: Optional[str] = "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9"
+    network: Optional[str] = "Polygon Amoy"
+
+class CertificateVerificationResponse(BaseModel):
+    status: str
+    certificateId: str
+    record: RetirementRecord
+    isBlockchainVerified: bool
+    network: str = "Polygon Amoy"
+    contractAddress: str = "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9"
+    explorerUrl: Optional[str] = None
+    verifiedAt: str
 
 class RetirementRequest(BaseModel):
     projectId: str
