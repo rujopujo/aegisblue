@@ -134,6 +134,8 @@ export interface TokenizedProject {
     pricePerTonUSD: number;
     txHash: string;
     blockNumber: number;
+    registrationTxHash?: string;
+    registrationBlockNumber?: number;
     mintedAt: string;
   };
   coBenefits: string[];

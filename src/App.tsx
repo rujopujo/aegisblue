@@ -17,13 +17,23 @@ import {
 } from './types';
 import { initializeMockProjects, INITIAL_RETIREMENTS } from './data/mockProjects';
 import { apiFetchProjects, apiSaveProject } from './services/apiClient';
+import {
+  POLYGON_AMOY_CONFIG,
+  checkExistingConnection,
+  connectBrowserWallet,
+  switchToPolygonAmoy,
+  subscribeToWalletEvents,
+} from './services/web3Registry';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard'>('home');
   
-  // Wallet State
-  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(true);
-  const [walletAddress, setWalletAddress] = useState<string>('0x71C8A932E648B47190F0C523B9921E749a219E34');
+  // Real Web3 Wallet State
+  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
+  const [walletAddress, setWalletAddress] = useState<string>('');
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [isCorrectNetwork, setIsCorrectNetwork] = useState<boolean>(true);
+  const [isConnectingWallet, setIsConnectingWallet] = useState<boolean>(false);
 
   // Multi-Pillar Pipeline State
   const [stage1Project, setStage1Project] = useState<{
@@ -59,17 +69,88 @@ export function App() {
     });
   }, []);
 
+  // Non-intrusive existing connection check and MetaMask event listeners
+  useEffect(() => {
+    checkExistingConnection().then((state) => {
+      if (state) {
+        setIsWalletConnected(true);
+        setWalletAddress(state.address);
+        setChainId(state.chainId);
+        setIsCorrectNetwork(state.isCorrectNetwork);
+      }
+    });
+
+    const unsubscribe = subscribeToWalletEvents(
+      (accounts) => {
+        if (!accounts || accounts.length === 0) {
+          setIsWalletConnected(false);
+          setWalletAddress('');
+          setChainId(null);
+        } else {
+          setIsWalletConnected(true);
+          setWalletAddress(accounts[0]);
+        }
+      },
+      (newChainIdHex) => {
+        const parsedChainId = parseInt(newChainIdHex, 16);
+        setChainId(parsedChainId);
+        setIsCorrectNetwork(parsedChainId === POLYGON_AMOY_CONFIG.chainId);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // ESG Certificate Modal State
   const [selectedRetirement, setSelectedRetirement] = useState<RetirementRecord | null>(null);
   const [isCertModalOpen, setIsCertModalOpen] = useState<boolean>(false);
 
-  // Wallet Connection toggle
-  const handleConnectWallet = () => {
-    if (!isWalletConnected) {
+  // Real MetaMask Connection Handler
+  const handleConnectWallet = async () => {
+    if (isWalletConnected && isCorrectNetwork) {
+      alert(`Connected to Polygon Amoy Testnet (#${chainId || 80002}) with address:\n${walletAddress}`);
+      return;
+    }
+
+    if (isWalletConnected && !isCorrectNetwork) {
+      try {
+        await switchToPolygonAmoy();
+        setIsCorrectNetwork(true);
+        setChainId(POLYGON_AMOY_CONFIG.chainId);
+      } catch (err: any) {
+        alert(`Failed to switch network: ${err?.message || err}`);
+      }
+      return;
+    }
+
+    setIsConnectingWallet(true);
+    try {
+      const state = await connectBrowserWallet();
       setIsWalletConnected(true);
-      setWalletAddress('0x71C8A932E648B47190F0C523B9921E749a219E34');
-    } else {
-      alert(`Connected to Polygon Amoy Testnet (#80002) with address: ${walletAddress}`);
+      setWalletAddress(state.address);
+      setChainId(state.chainId);
+      setIsCorrectNetwork(state.isCorrectNetwork);
+    } catch (err: any) {
+      // User rejected request error code 4001
+      if (err?.code === 4001 || err?.message?.includes('User rejected')) {
+        console.warn('[AegisBlue] User rejected wallet connection request.');
+      } else {
+        alert(err?.message || 'Failed to connect MetaMask wallet.');
+      }
+    } finally {
+      setIsConnectingWallet(false);
+    }
+  };
+
+  const handleSwitchNetwork = async () => {
+    try {
+      await switchToPolygonAmoy();
+      setIsCorrectNetwork(true);
+      setChainId(POLYGON_AMOY_CONFIG.chainId);
+    } catch (err: any) {
+      alert(`Failed to switch network to Polygon Amoy: ${err?.message || err}`);
     }
   };
 
@@ -133,7 +214,7 @@ export function App() {
   const activePillar1Project = stage1Project || {
     name: 'Sundarbans Core Delta Blue Carbon Restoration',
     ngoName: 'Sundarbans Mangrove Climate Alliance (SMCA)',
-    ngoWallet: '0x3B88e63F9D661d9a244C3A73Ec5D875F7925e510',
+    ngoWallet: walletAddress || '0x3B88e63F9D661d9a244C3A73Ec5D875F7925e510',
     ngoRegistrationNo: 'WB-NGO-ENV-2024-9941',
     locationName: 'Sundarbans Biosphere Reserve, West Bengal',
     coordinates: [
@@ -163,7 +244,10 @@ export function App() {
         setActiveTab={setActiveTab}
         walletAddress={walletAddress}
         isWalletConnected={isWalletConnected}
+        isCorrectNetwork={isCorrectNetwork}
+        isConnectingWallet={isConnectingWallet}
         onConnectWallet={handleConnectWallet}
+        onSwitchNetwork={handleSwitchNetwork}
         totalSequesteredTons={totalSequesteredTons}
         totalTokensMinted={totalTokensMinted}
         totalRetiredTons={totalRetiredTons}

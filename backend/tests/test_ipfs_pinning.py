@@ -233,3 +233,24 @@ class TestIPFSPinEndpoint:
         retirements_resp = client.get("/api/retirements")
         assert retirements_resp.status_code == 200
         assert isinstance(retirements_resp.json(), list)
+
+
+class TestPinataTlsVerification:
+    """Unit tests ensuring TLS certificate validation defaults to True and is safely configurable."""
+
+    def test_default_tls_verification_is_true(self):
+        from services.ipfs_service import should_verify_tls
+        with patch.dict(os.environ, {}, clear=False):
+            if "PINATA_VERIFY_TLS" in os.environ:
+                del os.environ["PINATA_VERIFY_TLS"]
+            assert should_verify_tls() is True
+
+    def test_configurable_tls_verification_via_env(self):
+        from services.ipfs_service import should_verify_tls
+        with patch.dict(os.environ, {"PINATA_VERIFY_TLS": "false"}):
+            assert should_verify_tls() is False
+        with patch.dict(os.environ, {"PINATA_VERIFY_TLS": "0"}):
+            assert should_verify_tls() is False
+        with patch.dict(os.environ, {"PINATA_VERIFY_TLS": "true"}):
+            assert should_verify_tls() is True
+

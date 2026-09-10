@@ -265,3 +265,60 @@ export async function apiRetireCredits(
     source: 'CLIENT_FALLBACK'
   };
 }
+
+export interface PinAuditDossierParams {
+  projectId: string;
+  auditHash: string;
+  totalCredits: number;
+  projectName?: string;
+  ngoName?: string;
+  locationName?: string;
+  areaHectares?: number;
+  coordinates?: LatLng[];
+  spectralData?: SatelliteBandData;
+  carbonMetrics?: CarbonAuditMetrics;
+  nearestCcnCore?: CcnCoreSampleInfo;
+  dossier?: Record<string, any>;
+  customMetadata?: Record<string, any>;
+}
+
+export interface PinAuditDossierResult {
+  status: string;
+  cid: string;
+  gatewayUrl: string;
+  pinSize: number;
+  timestamp: string;
+  projectId: string;
+  auditHash: string;
+  totalCredits: number;
+  dossier: Record<string, any>;
+}
+
+/**
+ * Pins audit dossier to IPFS via Python FastAPI backend (which contacts Pinata securely server-side)
+ */
+export async function apiPinAuditDossier(
+  params: PinAuditDossierParams
+): Promise<PinAuditDossierResult> {
+  const res = await fetch(`${API_BASE}/api/ipfs/pin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    let errorMessage = `IPFS pinning failed with HTTP ${res.status}`;
+    try {
+      const errData = await res.json();
+      if (errData?.detail) {
+        errorMessage = errData.detail;
+      }
+    } catch (_jsonErr) {
+      // Use fallback error message
+    }
+    throw new Error(errorMessage);
+  }
+
+  return await res.json();
+}
+

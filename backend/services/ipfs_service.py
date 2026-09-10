@@ -43,6 +43,15 @@ def get_gateway_url() -> str:
         gateway += "/"
     return gateway
 
+def should_verify_tls() -> bool:
+    """
+    Determines whether TLS certificate verification is enforced for Pinata HTTP requests.
+    Defaults to True (secure verification enabled). Can be set to 'false', '0', or 'no'
+    via PINATA_VERIFY_TLS if required for local development or corporate proxy environments.
+    """
+    val = os.environ.get("PINATA_VERIFY_TLS", "true").strip().lower()
+    return val not in ("false", "0", "no", "off")
+
 def pin_json_to_ipfs(
     content: Dict[str, Any],
     name: Optional[str] = None,
@@ -65,6 +74,7 @@ def pin_json_to_ipfs(
 
     jwt = get_pinata_jwt()
     item_name = name or f"AegisBlue-Audit-{content.get('projectId', 'artifact')}"
+    verify_tls = should_verify_tls()
 
     payload = {
         "pinataContent": content,
@@ -87,7 +97,8 @@ def pin_json_to_ipfs(
             PINATA_PIN_JSON_URL,
             json=payload,
             headers=headers,
-            timeout=timeout
+            timeout=timeout,
+            verify=verify_tls
         )
     except requests.Timeout as e:
         logger.error("Pinata IPFS request timed out after %s seconds", timeout)
