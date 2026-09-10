@@ -16,12 +16,14 @@ interface EnterpriseDashboardProps {
   retirements: RetirementRecord[];
   projects: TokenizedProject[];
   onOpenCertificate: (record: RetirementRecord) => void;
+  onNavigateVerify?: (certificateId: string) => void;
 }
 
 export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
   retirements,
   projects,
   onOpenCertificate,
+  onNavigateVerify,
 }) => {
   const totalRetiredTons = retirements.reduce((acc, curr) => acc + curr.tonsRetired, 0);
   const totalHectaresProtected = Math.round(totalRetiredTons / 18.5);
@@ -157,6 +159,11 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
                         <div className="text-slate-100 font-medium truncate">{rec.projectName}</div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                           {new Date(rec.retiredAt).toLocaleDateString()}
+                          {rec.tokenId && (
+                            <span className="ml-2 text-cyan-300">
+                              • Token: {rec.tokenId.length > 14 ? `${rec.tokenId.slice(0, 6)}...${rec.tokenId.slice(-4)}` : rec.tokenId}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -171,27 +178,47 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
                       </td>
 
                       <td className="py-4 pr-4 font-mono text-[10px]">
-                        <a
-                          href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${rec.txHash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-cyan-400 hover:underline flex items-center space-x-1"
-                        >
-                          <span>{rec.txHash.slice(0, 14)}...</span>
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                        </a>
+                        {rec.txHash ? (
+                          <a
+                            href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${rec.txHash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-cyan-400 hover:underline flex items-center space-x-1"
+                          >
+                            <span>{rec.txHash.slice(0, 14)}...</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                            Off-Chain Record
+                          </span>
+                        )}
+                        {rec.burnReceiptBlock > 0 && (
+                          <div className="text-[9px] text-slate-400 mt-0.5">
+                            Block #{rec.burnReceiptBlock}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-4 text-right space-x-2 whitespace-nowrap">
                         <button
                           onClick={() => onOpenCertificate(rec)}
-                          className="px-3 py-1.5 rounded-lg bg-ocean-800 hover:bg-ocean-700 text-cyan-300 text-xs font-semibold border border-ocean-700 transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-ocean-800 hover:bg-ocean-700 text-cyan-300 text-xs font-semibold border border-ocean-700 transition-colors"
                         >
                           View
                         </button>
+                        {onNavigateVerify && (
+                          <button
+                            onClick={() => onNavigateVerify(rec.certificateId)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 text-xs font-semibold border border-emerald-500/40 transition-colors"
+                            title="Verify on public portal"
+                          >
+                            Verify
+                          </button>
+                        )}
                         <button
                           onClick={() => downloadESGCertificatePDF(rec, proj)}
-                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold transition-all shadow-sm"
+                          className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold transition-all shadow-sm"
                         >
                           PDF
                         </button>
