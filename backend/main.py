@@ -17,10 +17,19 @@ from models import (
     SatelliteAuditResponse,
     TokenizedProject,
     RetirementRequest,
-    RetirementRecord
+    RetirementRecord,
+    AuditDossierPinRequest,
+    AuditDossierPinResponse
 )
 from services.spatial import validate_boundary
 from services.satellite_mrv import perform_satellite_audit
+from services.ipfs_service import (
+    pin_json_to_ipfs,
+    PinataConfigError,
+    PinataNetworkError,
+    PinataAPIError,
+    PinataError
+)
 from services.database import (
     init_db,
     get_all_projects,
@@ -186,6 +195,141 @@ def retire_carbon_credits(request: RetirementRequest):
         "updatedProject": project,
         "retirementRecord": record
     }
+
+@app.post("/api/ipfs/pin", response_model=AuditDossierPinResponse)
+def pin_audit_dossier(request: AuditDossierPinRequest):
+    """
+    Pins an immutable AegisBlue MRV audit dossier / metadata package to IPFS via Pinata.
+    Returns the cryptographic IPFS CID (Content Identifier) and gateway access URL.
+    Ensures that Pinata JWT credentials remain strictly server-side.
+    """
+    if not request.projectId or not request.projectId.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'projectId' cannot be empty."
+        )
+
+    if not request.auditHash or not request.auditHash.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'auditHash' cannot be empty."
+        )
+
+    clean_audit_hash = request.auditHash.strip()
+    if not clean_audit_hash.startswith("0x"):
+        clean_audit_hash = "0x" + clean_audit_hash
+
+    if len(clean_audit_hash) != 66:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'auditHash' must be a valid 32-byte hexadecimal hash (66 characters with 0x prefix)."
+        )
+
+    try:
+        int(clean_audit_hash[2:], 16)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'auditHash' must contain only valid hexadecimal characters."
+        )
+
+    if request.totalCredits <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'totalCredits' must be greater than 0."
+        )
+
+    # Build canonical audit dossier if pre-built dossier not provided
+    if request.dossier:
+        dossier = request.dossier
+        dossier["projectId"] = request.projectId
+        dossier["auditHash"] = clean_audit_hash
+        dossier["totalCredits"] = request.totalCredits
+    else:
+        dossier = {
+            "schema": "AegisBlue-BlueCarbon-Audit-v1.0",
+            "projectId": request.projectId,
+            "projectName": request.projectName,
+            "auditHash": clean_audit_hash,
+            "totalCredits": request.totalCredits,
+            "areaHectares": request.areaHectares,
+            "coordinates": request.coordinates,
+            "ngoName": request.ngoName,
+            "locationName": request.locationName,
+            "mrv": {
+                "satellite": request.spectralData.satellite if request.spectralData else "Sentinel-2B",
+                "sceneId": request.spectralData.sceneId if request.spectralData else None,
+                "acquisitionDate": request.spectralData.acquisitionDate if request.spectralData else None,
+                "telemetryMode": request.spectralData.telemetryMode if request.spectralData else "LIVE_SENTINEL_STAC",
+                "cloudCoverPct": request.spectralData.cloudCoverPct if request.spectralData else None,
+                "spectralBands": {
+                    "band2_blue": request.spectralData.band2_blue,
+                    "band3_green": request.spectralData.band3_green,
+                    "band4_red": request.spectralData.band4_red,
+                    "band8_nir": request.spectralData.band8_nir,
+                    "band11_swir": request.spectralData.band11_swir,
+                } if request.spectralData else {}
+            },
+            "carbonMetrics": request.carbonMetrics.model_dump() if request.carbonMetrics else {},
+            "soilCoreSample": request.nearestCcnCore.model_dump() if request.nearestCcnCore else None,
+            "scientificModel": {
+                "standard": "IPCC Tier-3 Wetland Supplement (2013) & Komiyama Allometric Canopy Math",
+                "allometricEquation": "AGB = 115.0 * (NDVI)^1.8 * (H/8.0)^0.85 * 0.65; BGB = 0.49 * AGB",
+                "stoichiometricConversion": "CO2e = Total Organic Carbon * (44 / 12)",
+                "referenceDataset": "Smithsonian Coastal Carbon Network (CCN v2.1)"
+            },
+            "audit": {
+                "auditHash": clean_audit_hash,
+                "status": "VERIFIED",
+                "verifiedBy": "AegisBlue Digital MRV Engine"
+            }
+        }
+        if request.customMetadata:
+            dossier["customMetadata"] = request.customMetadata
+
+    try:
+        pin_result = pin_json_to_ipfs(
+            content=dossier,
+            name=f"AegisBlue-Audit-{request.projectId}",
+            keyvalues={
+                "projectId": request.projectId,
+                "auditHash": clean_audit_hash,
+                "totalCredits": str(request.totalCredits)
+            }
+        )
+    except PinataConfigError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="IPFS pinning service is not configured on the server."
+        )
+    except PinataNetworkError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Connection to IPFS pinning service timed out."
+        )
+    except PinataAPIError as e:
+        http_code = e.status_code if e.status_code and e.status_code != 200 else status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(
+            status_code=http_code,
+            detail=f"IPFS pinning service error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unexpected failure while pinning audit dossier to IPFS."
+        )
+
+    return AuditDossierPinResponse(
+        status="SUCCESS",
+        cid=pin_result["cid"],
+        gatewayUrl=pin_result["gatewayUrl"],
+        pinSize=pin_result["pinSize"],
+        timestamp=pin_result["timestamp"],
+        projectId=request.projectId,
+        auditHash=clean_audit_hash,
+        totalCredits=request.totalCredits,
+        dossier=dossier
+    )
 
 if __name__ == "__main__":
     import uvicorn

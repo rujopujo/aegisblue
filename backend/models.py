@@ -158,3 +158,30 @@ class RetirementRequest(BaseModel):
     companyName: str
     companyWallet: str
     purpose: str
+
+class AuditDossierPinRequest(BaseModel):
+    projectId: str
+    auditHash: str
+    totalCredits: float
+    projectName: Optional[str] = "Blue Carbon Restoration Project"
+    ngoName: Optional[str] = None
+    locationName: Optional[str] = None
+    areaHectares: Optional[float] = None
+    coordinates: Optional[List[List[float]]] = None
+    spectralData: Optional[SatelliteBandData] = None
+    carbonMetrics: Optional[CarbonAuditMetrics] = None
+    nearestCcnCore: Optional[CcnCoreSampleInfo] = None
+    dossier: Optional[Dict[str, Any]] = None
+    customMetadata: Optional[Dict[str, Any]] = None
+
+class AuditDossierPinResponse(BaseModel):
+    status: str = "SUCCESS"
+    cid: str
+    gatewayUrl: str
+    pinSize: int
+    timestamp: str
+    projectId: str
+    auditHash: str
+    totalCredits: float
+    dossier: Dict[str, Any]
+
