@@ -27,16 +27,22 @@ export const POLYGON_AMOY_CONFIG = {
 export const AEGIS_BLUE_ABI = [
   'function owner() view returns (address)',
   'function balanceOf(address account, uint256 id) view returns (uint256)',
+  'function setApprovalForAll(address operator, bool approved)',
+  'function isApprovedForAll(address account, address operator) view returns (bool)',
+  'function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)',
   'function getProject(uint256 tokenId) view returns (tuple(string projectId, string ipfsCid, bytes32 auditHash, uint256 tokenId, uint256 totalCredits, bool registered))',
   'function registerProject(string projectId, string ipfsCid, bytes32 auditHash, uint256 tokenId, uint256 totalCredits)',
   'function mint(address recipient, uint256 tokenId, uint256 amount)',
   'function retire(uint256 tokenId, uint256 amount)',
   'function isProjectIdRegistered(string projectId) view returns (bool)',
   'function projectIdToTokenId(string projectId) view returns (uint256)',
+  'event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)',
+  'event ApprovalForAll(address indexed account, address indexed operator, bool approved)',
   'event ProjectRegistered(uint256 indexed tokenId, string projectId, string ipfsCid, bytes32 auditHash, uint256 totalCredits)',
   'event CarbonCreditsMinted(address indexed recipient, uint256 indexed tokenId, uint256 amount, address indexed minter)',
   'event CarbonCreditsRetired(address indexed account, uint256 indexed tokenId, uint256 amount)'
 ];
+
 
 export interface Web3AccountState {
   address: string;
@@ -222,6 +228,22 @@ export function formatWeb3ErrorMessage(error: any): string {
     return msg;
   }
 
+  if (msg.includes('ERC1155InsufficientBalance') || msg.includes('insufficient balance')) {
+    return 'Insufficient ERC-1155 token balance in your wallet to complete this transfer or retirement.';
+  }
+
+  if (msg.includes('ERC1155MissingApprovalForAll')) {
+    return 'Wallet has not granted operator approval to transfer these tokens.';
+  }
+
+  if (msg.includes('ERC1155InvalidReceiver')) {
+    return 'Invalid recipient address or contract receiver for ERC-1155 tokens.';
+  }
+
+  if (msg.includes('InvalidAmount') || msg.includes('amount must be greater than 0') || msg.includes('zero amount')) {
+    return 'Transaction amount must be greater than zero.';
+  }
+
   if (msg.includes('ProjectAlreadyRegistered')) {
     return 'This project ID has already been registered on-chain.';
   }
@@ -235,11 +257,15 @@ export function formatWeb3ErrorMessage(error: any): string {
   }
 
   if (msg.includes('InvalidRecipient')) {
-    return 'Invalid recipient address provided for token minting.';
+    return 'Invalid recipient address provided.';
   }
 
   if (msg.includes('network') || msg.includes('chain')) {
     return `Network error: ${msg}. Please ensure your MetaMask is connected to Polygon Amoy (Chain ID 80002).`;
+  }
+
+  if (error.code === 'CALL_EXCEPTION' || msg.includes('execution reverted')) {
+    return 'Smart contract execution reverted on Polygon Amoy. Please verify your token balance and transaction parameters.';
   }
 
   return msg.length > 200 ? `${msg.slice(0, 200)}...` : msg;
@@ -341,6 +367,162 @@ export async function mintOnChainCredits(
     blockNumber: receipt.blockNumber,
   };
 }
+
+/**
+ * Retrieves the currently connected wallet address from BrowserProvider signer
+ */
+export async function getConnectedWalletAddress(): Promise<string | null> {
+  const provider = getBrowserProvider();
+  if (!provider) return null;
+  try {
+    const signer = await provider.getSigner();
+    return await signer.getAddress();
+  } catch (_err) {
+    return null;
+  }
+}
+
+/**
+ * Checks if operator is approved for all ERC-1155 tokens owned by account
+ */
+export async function checkIsApprovedForAll(
+  account: string,
+  operator: string,
+  runner?: ContractRunner
+): Promise<boolean> {
+  if (!isAddress(account) || !isAddress(operator)) return false;
+  const contract = getContract(runner);
+  try {
+    return await contract.isApprovedForAll(account, operator);
+  } catch (_err) {
+    return false;
+  }
+}
+
+/**
+ * Sets or unsets operator approval for all ERC-1155 tokens owned by the connected wallet
+ */
+export async function setApprovalForAllOnChain(
+  operator: string,
+  approved: boolean
+): Promise<{ txHash: string; blockNumber: number }> {
+  const cleanOp = (operator || '').trim();
+  if (!isAddress(cleanOp)) {
+    throw new Error('Invalid operator Ethereum address provided for approval.');
+  }
+
+  const provider = getBrowserProvider();
+  if (!provider) {
+    throw new Error('MetaMask is not detected. Please install or connect MetaMask.');
+  }
+
+  const signer = await provider.getSigner();
+  const contract = getContract(signer);
+  const tx = await contract.setApprovalForAll(cleanOp, approved);
+  const receipt = await tx.wait(1);
+  return {
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+  };
+}
+
+/**
+ * Transfers ERC-1155 carbon credit tokens directly from connected wallet to recipient address
+ * Uses safeTransferFrom without requiring intermediate operator approvals.
+ */
+export async function transferOnChainCredits(
+  to: string,
+  tokenId: bigint | string,
+  amount: number | bigint,
+  data?: string
+): Promise<{ txHash: string; blockNumber: number }> {
+  const cleanTo = (to || '').trim();
+  if (!isAddress(cleanTo)) {
+    throw new Error('Invalid recipient Ethereum address.');
+  }
+
+  if (cleanTo.toLowerCase() === '0x0000000000000000000000000000000000000000') {
+    throw new Error('Cannot transfer credits to the zero address. Use the retirement function to permanently burn credits.');
+  }
+
+  const amountBigInt = typeof amount === 'bigint' ? amount : BigInt(Math.round(amount));
+  if (amountBigInt <= 0n) {
+    throw new Error('Transfer amount must be greater than zero.');
+  }
+
+  const tokenIdBigInt = typeof tokenId === 'bigint' ? tokenId : BigInt(tokenId);
+
+  const provider = getBrowserProvider();
+  if (!provider) {
+    throw new Error('MetaMask is not detected. Please install or connect MetaMask.');
+  }
+
+  const signer = await provider.getSigner();
+  const callerAddress = await signer.getAddress();
+  const contract = getContract(signer);
+
+  // Read caller's actual on-chain ERC-1155 balance
+  const balance: bigint = await contract.balanceOf(callerAddress, tokenIdBigInt);
+  if (balance < amountBigInt) {
+    throw new Error(
+      `Insufficient token balance: you hold ${balance.toString()} credits, but tried to transfer ${amountBigInt.toString()} credits.`
+    );
+  }
+
+  const tx = await contract.safeTransferFrom(
+    callerAddress,
+    cleanTo,
+    tokenIdBigInt,
+    amountBigInt,
+    data || '0x'
+  );
+
+  const receipt = await tx.wait(1);
+  return {
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+  };
+}
+
+/**
+ * Permanently retires (burns) ERC-1155 carbon credits from connected wallet's balance on Polygon Amoy
+ */
+export async function retireOnChainCredits(
+  tokenId: bigint | string,
+  amount: number | bigint
+): Promise<{ txHash: string; blockNumber: number }> {
+  const amountBigInt = typeof amount === 'bigint' ? amount : BigInt(Math.round(amount));
+  if (amountBigInt <= 0n) {
+    throw new Error('Retirement amount must be greater than zero.');
+  }
+
+  const tokenIdBigInt = typeof tokenId === 'bigint' ? tokenId : BigInt(tokenId);
+
+  const provider = getBrowserProvider();
+  if (!provider) {
+    throw new Error('MetaMask is not detected. Please install or connect MetaMask.');
+  }
+
+  const signer = await provider.getSigner();
+  const callerAddress = await signer.getAddress();
+  const contract = getContract(signer);
+
+  // Read caller's actual on-chain ERC-1155 balance
+  const balance: bigint = await contract.balanceOf(callerAddress, tokenIdBigInt);
+  if (balance < amountBigInt) {
+    throw new Error(
+      `Insufficient token balance: you hold ${balance.toString()} credits, but tried to retire ${amountBigInt.toString()} credits.`
+    );
+  }
+
+  const tx = await contract.retire(tokenIdBigInt, amountBigInt);
+  const receipt = await tx.wait(1);
+  return {
+    txHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+  };
+}
+
 
 
 /**

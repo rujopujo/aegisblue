@@ -151,6 +151,7 @@ class RetirementRecord(BaseModel):
     retiredAt: str
     certificateId: str
     ipfsCertificateCid: str
+    tokenId: Optional[str] = None
 
 class RetirementRequest(BaseModel):
     projectId: str
@@ -158,6 +159,13 @@ class RetirementRequest(BaseModel):
     companyName: str
     companyWallet: str
     purpose: str
+    tokenId: Optional[str] = None
+    transactionHash: Optional[str] = None
+    blockNumber: Optional[int] = None
+    retiredAt: Optional[str] = None
+    certificateId: Optional[str] = None
+    ipfsCertificateCid: Optional[str] = None
+
 
 class AuditDossierPinRequest(BaseModel):
     projectId: str

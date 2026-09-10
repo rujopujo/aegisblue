@@ -156,4 +156,6 @@ export interface RetirementRecord {
   retiredAt: string;
   certificateId: string;
   ipfsCertificateCid: string;
+  tokenId?: string;
 }
+

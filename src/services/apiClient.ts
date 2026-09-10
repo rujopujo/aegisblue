@@ -218,20 +218,111 @@ export async function apiSaveProject(project: TokenizedProject): Promise<boolean
   }
 }
 
-/**
- * Executes credit retirement with FastAPI or client fallback
- */
-export async function apiRetireCredits(
-  project: TokenizedProject,
-  tonsToRetire: number,
-  companyName: string,
-  companyWallet: string,
-  purpose: string
-): Promise<{
+export interface RetireCreditsPayload {
+  project: TokenizedProject;
+  tonsToRetire: number;
+  companyName: string;
+  companyWallet: string;
+  purpose: string;
+  tokenId?: string;
+  transactionHash?: string;
+  blockNumber?: number;
+  retiredAt?: string;
+  certificateId?: string;
+  ipfsCertificateCid?: string;
+}
+
+export interface RetireCreditsResponse {
+  success: boolean;
   updatedProject: TokenizedProject;
   retirementRecord: RetirementRecord;
-  source: 'FASTAPI' | 'CLIENT_FALLBACK';
+  source: 'FASTAPI' | 'CLIENT_FALLBACK' | 'CLIENT_PENDING_SYNC';
+  error?: string;
+}
+
+/**
+ * Synchronizes confirmed retirement data to Python FastAPI backend without re-executing on blockchain
+ */
+export async function apiSyncRetirement(
+  params: RetireCreditsPayload
+): Promise<{
+  success: boolean;
+  updatedProject?: TokenizedProject;
+  retirementRecord?: RetirementRecord;
+  error?: string;
 }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/retirements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: params.project.id,
+        tonsToRetire: params.tonsToRetire,
+        companyName: params.companyName,
+        companyWallet: params.companyWallet,
+        purpose: params.purpose,
+        tokenId: params.tokenId || params.project.tokenization.tokenId,
+        transactionHash: params.transactionHash,
+        blockNumber: params.blockNumber,
+        retiredAt: params.retiredAt,
+        certificateId: params.certificateId,
+        ipfsCertificateCid: params.ipfsCertificateCid,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        updatedProject: data.updatedProject,
+        retirementRecord: data.retirementRecord,
+      };
+    }
+    const errData = await res.json().catch(() => ({}));
+    return {
+      success: false,
+      error: errData.detail || `Backend sync failed with HTTP ${res.status}`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Network error contacting backend database.',
+    };
+  }
+}
+
+/**
+ * Records confirmed credit retirement with FastAPI or client fallback
+ * Preserves confirmed on-chain transaction hash and avoids re-executing retirement on sync errors.
+ */
+export async function apiRetireCredits(
+  projectOrParams: TokenizedProject | RetireCreditsPayload,
+  tonsToRetireParam?: number,
+  companyNameParam?: string,
+  companyWalletParam?: string,
+  purposeParam?: string,
+  extra?: {
+    tokenId?: string;
+    transactionHash?: string;
+    blockNumber?: number;
+    retiredAt?: string;
+    certificateId?: string;
+    ipfsCertificateCid?: string;
+  }
+): Promise<RetireCreditsResponse> {
+  const isPayloadObj = 'project' in projectOrParams;
+  const project = isPayloadObj ? projectOrParams.project : projectOrParams;
+  const tonsToRetire = isPayloadObj ? projectOrParams.tonsToRetire : (tonsToRetireParam || 0);
+  const companyName = isPayloadObj ? projectOrParams.companyName : (companyNameParam || 'Enterprise');
+  const companyWallet = isPayloadObj ? projectOrParams.companyWallet : (companyWalletParam || '');
+  const purpose = isPayloadObj ? projectOrParams.purpose : (purposeParam || 'ESG Compliance');
+  const tokenId = isPayloadObj ? projectOrParams.tokenId : extra?.tokenId;
+  const transactionHash = isPayloadObj ? projectOrParams.transactionHash : extra?.transactionHash;
+  const blockNumber = isPayloadObj ? projectOrParams.blockNumber : extra?.blockNumber;
+  const retiredAt = isPayloadObj ? projectOrParams.retiredAt : extra?.retiredAt;
+  const certificateId = isPayloadObj ? projectOrParams.certificateId : extra?.certificateId;
+  const ipfsCertificateCid = isPayloadObj ? projectOrParams.ipfsCertificateCid : extra?.ipfsCertificateCid;
+
   try {
     const res = await fetch(`${API_BASE}/api/retirements`, {
       method: 'POST',
@@ -241,30 +332,78 @@ export async function apiRetireCredits(
         tonsToRetire,
         companyName,
         companyWallet,
-        purpose
-      })
+        purpose,
+        tokenId: tokenId || project.tokenization.tokenId,
+        transactionHash,
+        blockNumber,
+        retiredAt,
+        certificateId,
+        ipfsCertificateCid,
+      }),
     });
 
     if (res.ok) {
       const data = await res.json();
       return {
+        success: true,
         updatedProject: data.updatedProject,
         retirementRecord: data.retirementRecord,
-        source: 'FASTAPI'
+        source: 'FASTAPI',
       };
     }
   } catch (err) {
-    console.warn('[AegisBlue] FastAPI retirement endpoint offline, falling back to local Web3 engine:', err);
+    console.warn('[AegisBlue] FastAPI retirement endpoint offline or failed to sync:', err);
   }
 
-  // Fallback to client-side web3Registry execution
+  // If a real on-chain transaction hash exists, preserve it! Do NOT fabricate or re-burn.
+  if (transactionHash) {
+    const nowIso = retiredAt || new Date().toISOString();
+    const certId = certificateId || `ESG-NETZERO-${Math.random().toString(36).substring(2, 9).toUpperCase()}-2026`;
+    const fallbackRecord: RetirementRecord = {
+      id: `RET-${Date.now().toString().slice(-6)}`,
+      projectId: project.id,
+      projectName: project.name,
+      companyName,
+      companyWallet,
+      tonsRetired: tonsToRetire,
+      purpose,
+      vintageYear: 2026,
+      txHash: transactionHash,
+      burnReceiptBlock: blockNumber || 0,
+      retiredAt: nowIso,
+      certificateId: certId,
+      ipfsCertificateCid: ipfsCertificateCid || '',
+      tokenId: tokenId || project.tokenization.tokenId,
+    };
+
+    const updatedProject: TokenizedProject = {
+      ...project,
+      tokenization: {
+        ...project.tokenization,
+        availableCredits: Math.max(0, project.tokenization.availableCredits - tonsToRetire),
+        retiredCredits: project.tokenization.retiredCredits + tonsToRetire,
+      },
+    };
+
+    return {
+      success: false,
+      updatedProject,
+      retirementRecord: fallbackRecord,
+      source: 'CLIENT_PENDING_SYNC',
+      error: 'Blockchain retirement succeeded on Polygon Amoy, but backend database synchronization failed.',
+    };
+  }
+
+  // Fallback to client-side simulated execution (for offline demo mode without real wallet)
   const fallback = executeTokenRetirement(project, tonsToRetire, companyName, companyWallet, purpose);
   return {
+    success: true,
     updatedProject: fallback.updatedProject,
     retirementRecord: fallback.retirementRecord,
-    source: 'CLIENT_FALLBACK'
+    source: 'CLIENT_FALLBACK',
   };
 }
+
 
 export interface PinAuditDossierParams {
   projectId: string;

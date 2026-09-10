@@ -138,9 +138,75 @@ def list_retirements():
 @app.post("/api/retirements")
 def retire_carbon_credits(request: RetirementRequest):
     """
-    Executes and records a corporate carbon credit retirement (burn).
-    Decrements project available tokens, creates certificate hash, and saves to SQLite.
+    Records a confirmed on-chain carbon credit retirement (burn).
+    Validates retirement data, decrements project available tokens in SQLite, and persists the record.
+    Does NOT generate fake transaction hashes or fake block numbers.
     """
+    # 1. Validate retirement amount
+    if request.tonsToRetire <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'tonsToRetire' must be greater than 0."
+        )
+
+    # 2. Validate wallet address (42 chars, 0x prefix, hex)
+    clean_wallet = (request.companyWallet or "").strip()
+    if not (clean_wallet.startswith("0x") and len(clean_wallet) == 42):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'companyWallet' must be a valid 42-character hexadecimal Ethereum address starting with '0x'."
+        )
+    try:
+        int(clean_wallet[2:], 16)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field 'companyWallet' contains invalid hexadecimal characters."
+        )
+
+    # 3. Validate transactionHash if supplied (66 chars, 0x prefix, hex)
+    clean_tx_hash = request.transactionHash.strip() if request.transactionHash else None
+    if clean_tx_hash:
+        if not (clean_tx_hash.startswith("0x") and len(clean_tx_hash) == 66):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Field 'transactionHash' must be a valid 66-character hexadecimal Ethereum transaction hash starting with '0x'."
+            )
+        try:
+            int(clean_tx_hash[2:], 16)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Field 'transactionHash' contains invalid hexadecimal characters."
+            )
+
+    # 4. Validate tokenId if supplied (positive integer)
+    clean_token_id = None
+    if request.tokenId is not None:
+        tid_str = str(request.tokenId).strip()
+        if tid_str:
+            try:
+                tid_int = int(tid_str)
+                if tid_int <= 0:
+                    raise ValueError()
+                clean_token_id = str(tid_int)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Field 'tokenId' must be a valid positive integer."
+                )
+
+    # 5. Validate blockNumber if supplied (positive integer)
+    clean_block_number = None
+    if request.blockNumber is not None:
+        if request.blockNumber <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Field 'blockNumber' must be a positive integer."
+            )
+        clean_block_number = request.blockNumber
+
+    # 6. Locate project in SQLite database
     project = get_project_by_id(request.projectId)
     if not project:
         raise HTTPException(
@@ -158,26 +224,28 @@ def retire_carbon_credits(request: RetirementRequest):
             detail=f"Requested retirement ({request.tonsToRetire} tons) exceeds available pool ({available} tons)."
         )
 
-    # Update project credits
+    # Update project credits in SQLite
     tokenization["availableCredits"] = available - request.tonsToRetire
     tokenization["retiredCredits"] = retired + request.tonsToRetire
     project["tokenization"] = tokenization
     save_or_update_project(project)
 
-    # Generate burn record
+    # 7. Record retirement receipt
     now_ts = int(datetime.now(timezone.utc).timestamp())
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = request.retiredAt or datetime.now(timezone.utc).isoformat()
     record_id = f"RET-{str(now_ts)[-6:]}"
-    certificate_id = f"ESG-NETZERO-{os.urandom(3).hex().upper()}-2026"
-    tx_hash = f"0x{os.urandom(16).hex()}98f2c3a71b402e8d91c53b2a"
-    burn_block = tokenization.get("blockNumber", 14892000) + 124
+    certificate_id = request.certificateId or f"ESG-NETZERO-{os.urandom(3).hex().upper()}-2026"
+
+    # Use real transaction hash if provided; otherwise empty string (never fabricate a fake hash)
+    tx_hash = clean_tx_hash or ""
+    burn_block = clean_block_number or 0
 
     record = {
         "id": record_id,
         "projectId": project["id"],
-        "projectName": project["name"],
+        "projectName": project.get("name", request.projectId),
         "companyName": request.companyName,
-        "companyWallet": request.companyWallet,
+        "companyWallet": clean_wallet,
         "tonsRetired": request.tonsToRetire,
         "purpose": request.purpose,
         "vintageYear": 2026,
@@ -185,7 +253,8 @@ def retire_carbon_credits(request: RetirementRequest):
         "burnReceiptBlock": burn_block,
         "retiredAt": now_iso,
         "certificateId": certificate_id,
-        "ipfsCertificateCid": f"bafybeig{os.urandom(4).hex()}burncert77x1"
+        "ipfsCertificateCid": request.ipfsCertificateCid or "",
+        "tokenId": clean_token_id or tokenization.get("tokenId")
     }
 
     save_retirement(record)
@@ -195,6 +264,7 @@ def retire_carbon_credits(request: RetirementRequest):
         "updatedProject": project,
         "retirementRecord": record
     }
+
 
 @app.post("/api/ipfs/pin", response_model=AuditDossierPinResponse)
 def pin_audit_dossier(request: AuditDossierPinRequest):

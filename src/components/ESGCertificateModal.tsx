@@ -87,6 +87,11 @@ export const ESGCertificateModal: React.FC<ESGCertificateModalProps> = ({
               <div>
                 <span className="text-slate-400">Project Name:</span>
                 <div className="text-white font-bold">{record.projectName}</div>
+                {record.tokenId && (
+                  <div className="text-[10px] text-cyan-300 font-mono truncate" title={record.tokenId}>
+                    Token: {record.tokenId.length > 20 ? `${record.tokenId.slice(0, 10)}...${record.tokenId.slice(-8)}` : record.tokenId}
+                  </div>
+                )}
               </div>
               <div>
                 <span className="text-slate-400">Certificate ID:</span>
@@ -109,14 +114,18 @@ export const ESGCertificateModal: React.FC<ESGCertificateModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-400">Transaction Hash:</span>
-                <a
-                  href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${record.txHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-cyan-400 hover:underline truncate block"
-                >
-                  {record.txHash.slice(0, 22)}...
-                </a>
+                {record.txHash ? (
+                  <a
+                    href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${record.txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-400 hover:underline truncate block"
+                  >
+                    {record.txHash.slice(0, 22)}...
+                  </a>
+                ) : (
+                  <div className="text-slate-500">Off-Chain Record</div>
+                )}
               </div>
               <div>
                 <span className="text-slate-400">IPFS Audit CID:</span>

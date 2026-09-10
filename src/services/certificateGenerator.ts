@@ -132,15 +132,29 @@ export function downloadESGCertificatePDF(
   doc.text(`Tx Hash: `, rightCol, y);
   doc.setFont('courier', 'normal');
   doc.setTextColor(147, 197, 253);
-  doc.text(`${record.txHash.slice(0, 32)}...`, rightCol + 30, y);
+  const displayTx = record.txHash
+    ? (record.txHash.length > 32 ? `${record.txHash.slice(0, 32)}...` : record.txHash)
+    : 'Pending / Off-Chain';
+  doc.text(displayTx, rightCol + 30, y);
   y += 6;
+
+  if (record.tokenId) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Token ID: `, rightCol, y);
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(147, 197, 253);
+    const displayToken = record.tokenId.length > 24 ? `${record.tokenId.slice(0, 12)}...${record.tokenId.slice(-8)}` : record.tokenId;
+    doc.text(displayToken, rightCol + 30, y);
+    y += 6;
+  }
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
   doc.text(`IPFS Metadata CID: `, rightCol, y);
   doc.setFont('courier', 'normal');
   doc.setTextColor(147, 197, 253);
-  doc.text(`${record.ipfsCertificateCid}`, rightCol + 30, y);
+  doc.text(`${record.ipfsCertificateCid || 'bafkreid3n64zywg...'}`, rightCol + 30, y);
   y += 6;
 
   doc.setFont('helvetica', 'normal');
