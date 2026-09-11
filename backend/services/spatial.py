@@ -223,9 +223,7 @@ def validate_boundary(coordinates: List[List[float]]) -> BoundaryCheckResult:
     centroid_lng = (bbox.minLng + bbox.maxLng) / 2.0
 
     matched_zone_dict = None
-    best_inside_count = 0
-    sample_steps = 5
-    total_samples = sample_steps * sample_steps
+    best_overlap_pct = 0.0
 
     for zone in GMW_REFERENCE_ZONES:
         zone_coords = zone["coordinates"]
@@ -237,24 +235,27 @@ def validate_boundary(coordinates: List[List[float]]) -> BoundaryCheckResult:
             centroid_lng >= zone_bbox.minLng - 0.05 and
             centroid_lng <= zone_bbox.maxLng + 0.05):
 
-            # Convert to Shapely polygon for accurate point containment
+            # Convert to Shapely polygon for geometric intersection calculation
             # Note: Shapely uses (x, y) = (lng, lat)
             shapely_zone = Polygon([(p[1], p[0]) for p in zone_coords])
+            shapely_project = Polygon([(p[1], p[0]) for p in points])
 
-            count = 0
-            for i in range(sample_steps):
-                for j in range(sample_steps):
-                    sample_lat = bbox.minLat + (i / max(1, sample_steps - 1)) * (bbox.maxLat - bbox.minLat)
-                    sample_lng = bbox.minLng + (j / max(1, sample_steps - 1)) * (bbox.maxLng - bbox.minLng)
-                    sample_pt = Point(sample_lng, sample_lat)
-                    if shapely_zone.contains(sample_pt) or shapely_zone.touches(sample_pt):
-                        count += 1
+            if not shapely_zone.is_valid:
+                shapely_zone = shapely_zone.buffer(0)
+            if not shapely_project.is_valid:
+                shapely_project = shapely_project.buffer(0)
 
-            if count > best_inside_count:
-                best_inside_count = count
+            if shapely_project.area > 0:
+                intersection_area = shapely_project.intersection(shapely_zone).area
+                zone_overlap = round((intersection_area / shapely_project.area) * 100.0)
+            else:
+                zone_overlap = 100.0 if shapely_zone.contains(Point(centroid_lng, centroid_lat)) else 0.0
+
+            if zone_overlap > best_overlap_pct:
+                best_overlap_pct = zone_overlap
                 matched_zone_dict = zone
 
-    overlap_pct = round((best_inside_count / total_samples) * 100.0) if matched_zone_dict else 0
+    overlap_pct = best_overlap_pct
     warnings = []
     matched_zone_model = MangrovePolygon(**matched_zone_dict) if matched_zone_dict else None
     now_iso = datetime.now(timezone.utc).isoformat()

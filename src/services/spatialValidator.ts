@@ -49,6 +49,48 @@ export function calculatePolygonAreaHa(polygon: LatLng[]): number {
 }
 
 /**
+ * Calculates Great-Circle Haversine distance in Kilometers between two lat/lng points.
+ */
+export function calculateHaversineDistanceKm(p1: LatLng, p2: LatLng): number {
+  const R = 6371; // Earth's mean radius in km
+  const dLat = ((p2[0] - p1[0]) * Math.PI) / 180;
+  const dLng = ((p2[1] - p1[1]) * Math.PI) / 180;
+  const lat1 = (p1[0] * Math.PI) / 180;
+  const lat2 = (p2[0] * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 1000) / 1000;
+}
+
+/**
+ * Calculates open polyline length in Kilometers between sequential points.
+ */
+export function calculatePolylineLengthKm(points: LatLng[]): number {
+  if (points.length < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    total += calculateHaversineDistanceKm(points[i], points[i + 1]);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+/**
+ * Calculates perimeter of a closed polygon in Kilometers.
+ */
+export function calculatePolygonPerimeterKm(polygon: LatLng[]): number {
+  if (polygon.length < 2) return 0;
+  let perimeter = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const nextIdx = (i + 1) % polygon.length;
+    perimeter += calculateHaversineDistanceKm(polygon[i], polygon[nextIdx]);
+  }
+  return Math.round(perimeter * 100) / 100;
+}
+
+/**
  * Calculates Bounding Box of given points
  */
 export function getBoundingBox(coords: LatLng[]) {
@@ -100,9 +142,8 @@ export function validateBoundaryAgainstGMW(
 
   // Check overlap against known GMW zones
   let matchedZone: MangrovePolygon | undefined;
-  let insideSampleCount = 0;
-  const sampleSteps = 5;
-  const totalSamples = sampleSteps * sampleSteps;
+  let bestOverlapPct = 0;
+  const sampleSteps = 10;
 
   for (const zone of GMW_MANGROVE_ZONES) {
     // Quick Bounding Box Check for the zone
@@ -113,27 +154,47 @@ export function validateBoundaryAgainstGMW(
       centroid[1] >= zoneBbox.minLng - 0.05 &&
       centroid[1] <= zoneBbox.maxLng + 0.05
     ) {
-      // Zone candidate found! Test multiple grid samples across the project polygon
-      let count = 0;
+      // Zone candidate found! Test points that fall strictly INSIDE the user's project polygon
+      let projectInternalPoints = 0;
+      let gmwInsideCount = 0;
+
+      // 1. Test all actual boundary vertices of the project
+      for (const vertex of polygonCoords) {
+        projectInternalPoints++;
+        if (isPointInPolygon(vertex, zone.coordinates)) {
+          gmwInsideCount++;
+        }
+      }
+
+      // 2. Sample dense internal grid points within the bounding box, filtering ONLY points inside the project boundary
       for (let i = 0; i < sampleSteps; i++) {
         for (let j = 0; j < sampleSteps; j++) {
           const sampleLat = bbox.minLat + (i / (sampleSteps - 1 || 1)) * (bbox.maxLat - bbox.minLat);
           const sampleLng = bbox.minLng + (j / (sampleSteps - 1 || 1)) * (bbox.maxLng - bbox.minLng);
-          
-          if (isPointInPolygon([sampleLat, sampleLng], zone.coordinates)) {
-            count++;
+          const samplePt: LatLng = [sampleLat, sampleLng];
+
+          // Crucial: Only evaluate points that actually reside inside the user's drawn polygon!
+          if (isPointInPolygon(samplePt, polygonCoords)) {
+            projectInternalPoints++;
+            if (isPointInPolygon(samplePt, zone.coordinates)) {
+              gmwInsideCount++;
+            }
           }
         }
       }
 
-      if (count > insideSampleCount) {
-        insideSampleCount = count;
+      const zoneOverlapPct = projectInternalPoints > 0
+        ? Math.round((gmwInsideCount / projectInternalPoints) * 100)
+        : 0;
+
+      if (zoneOverlapPct > bestOverlapPct) {
+        bestOverlapPct = zoneOverlapPct;
         matchedZone = zone;
       }
     }
   }
 
-  const overlapPct = matchedZone ? Math.round((insideSampleCount / totalSamples) * 100) : 0;
+  const overlapPct = bestOverlapPct;
   const warnings: string[] = [];
 
   // Gatekeeper Decision Rules
