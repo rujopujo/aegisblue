@@ -125,6 +125,7 @@ interface MapComponentProps {
   onTriggerSamSnap?: () => void;
   isSnappingSam?: boolean;
   hasSamSnapped?: boolean;
+  onUndoSamSnap?: () => void;
 }
 
 export const MapComponent: FC<MapComponentProps> = ({
@@ -147,6 +148,7 @@ export const MapComponent: FC<MapComponentProps> = ({
   onTriggerSamSnap,
   isSnappingSam = false,
   hasSamSnapped = false,
+  onUndoSamSnap,
 }) => {
   const markerIcon = useMemo(() => {
     if (isValidBoundary === true) {
@@ -181,28 +183,44 @@ export const MapComponent: FC<MapComponentProps> = ({
     <div className={`relative z-0 isolate w-full ${heightClass} rounded-2xl overflow-hidden border border-ocean-800 shadow-2xl bg-ocean-950 ${isDrawingMode ? 'drawing-mode-active' : ''}`}>
       {/* Floating Action Controls Overlay in Top-Right Corner of Map Canvas */}
       <div className="absolute top-3 right-3 z-[1000] pointer-events-auto flex items-center space-x-2">
-        {/* Meta SAM AI Canopy Snap Action Button */}
+        {/* Meta SAM AI Canopy Snap Action Button & Revert Control */}
         {onTriggerSamSnap && projectCoords.length >= 3 && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onTriggerSamSnap();
-            }}
-            disabled={isSnappingSam}
-            className={`px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center space-x-1.5 transition-all duration-200 shadow-2xl backdrop-blur-md border ${
-              isSnappingSam
-                ? 'bg-purple-950/90 text-purple-300 border-purple-500/50 animate-pulse'
-                : hasSamSnapped
-                ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-ocean-950 border-emerald-300 shadow-emerald-500/30'
-                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-400 text-white border border-purple-400/80 hover:scale-105 shadow-purple-500/30'
-            }`}
-            title="Use Meta Segment Anything Model (SAM) to snap this boundary directly to the mangrove canopy in satellite imagery"
-          >
-            <span>{isSnappingSam ? '⏳' : hasSamSnapped ? '✓' : '🪄'}</span>
-            <span className="tracking-wider uppercase text-[10px]">
-              {isSnappingSam ? 'AI Snapping...' : hasSamSnapped ? 'SAM Canopy Snapped' : 'AI Canopy Snap (SAM)'}
-            </span>
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerSamSnap();
+              }}
+              disabled={isSnappingSam}
+              className={`px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center space-x-1.5 transition-all duration-200 shadow-2xl backdrop-blur-md border ${
+                isSnappingSam
+                  ? 'bg-purple-950/90 text-purple-300 border-purple-500/50 animate-pulse'
+                  : hasSamSnapped
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-ocean-950 border-emerald-300 shadow-emerald-500/30'
+                  : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-400 text-white border border-purple-400/80 hover:scale-105 shadow-purple-500/30'
+              }`}
+              title="Use Meta Segment Anything Model (SAM) to snap this boundary directly to the mangrove canopy in satellite imagery"
+            >
+              <span>{isSnappingSam ? '⏳' : hasSamSnapped ? '✓' : '🪄'}</span>
+              <span className="tracking-wider uppercase text-[10px]">
+                {isSnappingSam ? 'AI Snapping...' : hasSamSnapped ? 'SAM Canopy Snapped' : 'AI Canopy Snap (SAM)'}
+              </span>
+            </button>
+
+            {hasSamSnapped && onUndoSamSnap && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUndoSamSnap();
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-ocean-950/90 hover:bg-ocean-900 border border-ocean-700 hover:border-cyan-400 text-slate-200 hover:text-cyan-300 font-extrabold text-xs flex items-center space-x-1 shadow-2xl backdrop-blur-md transition-all duration-200"
+                title="Undo AI Canopy Snap and restore your original hand-drawn points"
+              >
+                <span>↩️</span>
+                <span className="tracking-wider uppercase text-[10px]">Revert</span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* Drawing Mode Toggle Switch */}

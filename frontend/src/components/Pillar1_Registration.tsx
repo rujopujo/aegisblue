@@ -82,6 +82,7 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
   const [engineSource, setEngineSource] = useState<'FASTAPI' | 'CLIENT_FALLBACK' | null>(null);
   const [isSnappingSam, setIsSnappingSam] = useState<boolean>(false);
   const [samRefineData, setSamRefineData] = useState<SamRefineResponse | null>(null);
+  const [preSamCoords, setPreSamCoords] = useState<LatLng[] | null>(null);
 
   // Live Area and Perimeter Calculations
   const liveArea = useMemo(() => {
@@ -102,6 +103,8 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     setCurrentCoords(coords);
     setBoundaryResult(null);
     setEngineSource(null);
+    setSamRefineData(null);
+    setPreSamCoords(null);
     setIsDrawingMode(false);
     
     if (coords.length > 0) {
@@ -175,6 +178,8 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     setCurrentCoords([]);
     setSelectedPreset('');
     setBoundaryResult(null);
+    setSamRefineData(null);
+    setPreSamCoords(null);
     setAreaHectares(0);
     setIsDrawingMode(true);
     setInputMode('DRAW');
@@ -196,6 +201,8 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     setCurrentCoords([]);
     setSelectedPreset('');
     setBoundaryResult(null);
+    setSamRefineData(null);
+    setPreSamCoords(null);
     setAreaHectares(0);
   };
 
@@ -221,12 +228,14 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
   // Meta SAM AI Canopy Refinement Trigger
   const handleTriggerSamSnap = async () => {
     if (currentCoords.length < 3) return;
+    setPreSamCoords([...currentCoords]);
     setIsSnappingSam(true);
     try {
       const res = await apiRefineCanopySAM(currentCoords);
       setCurrentCoords(res.snappedCoordinates);
       setAreaHectares(res.areaHectares);
       setSamRefineData(res);
+      setIsDrawingMode(false); // Automatically pause drawing mode so the clean canopy polygon is rendered without pin clutter
       
       // Automatically re-validate the refined boundary with Gatekeeper
       setIsChecking(true);
@@ -239,6 +248,25 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     } finally {
       setIsSnappingSam(false);
     }
+  };
+
+  // Revert / Undo Meta SAM AI Canopy Snap
+  const handleUndoSamSnap = async () => {
+    if (!preSamCoords || preSamCoords.length < 3) return;
+    const restored = [...preSamCoords];
+    setCurrentCoords(restored);
+    setSamRefineData(null);
+    setPreSamCoords(null);
+    const restoredArea = calculatePolygonAreaHa(restored);
+    setAreaHectares(restoredArea);
+    setIsDrawingMode(true); // Re-enable drawing mode so user can continue manual editing
+
+    // Re-validate the restored boundary with Gatekeeper
+    setIsChecking(true);
+    const { result, source } = await apiValidateBoundary(restored);
+    setBoundaryResult(result);
+    setEngineSource(source);
+    setIsChecking(false);
   };
 
   // Run Spatial Gatekeeper Verification
@@ -616,6 +644,17 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {samRefineData && (
+                    <button
+                      onClick={handleUndoSamSnap}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 bg-ocean-900 hover:bg-ocean-850 text-slate-300 hover:text-white border border-ocean-700 hover:border-cyan-400 transition-colors shadow-sm"
+                      title="Revert to your pre-snap hand-drawn boundary"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>↩️ Revert to Hand-Drawn Points</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -784,6 +823,7 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
               onTriggerSamSnap={handleTriggerSamSnap}
               isSnappingSam={isSnappingSam}
               hasSamSnapped={!!samRefineData}
+              onUndoSamSnap={handleUndoSamSnap}
             />
           </div>
 
