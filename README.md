@@ -35,27 +35,52 @@
 
 ## 📁 Repository Structure
 
-All directories are organized in lowercase:
+The repository is organized into modular services with root-level orchestration:
 
 ```
 aegisblue/
-├── docker/                 # Production Dockerfile and Nginx configuration
-│   ├── Dockerfile
-│   └── nginx.conf
-├── docs/                   # Team guides and project documentation
-│   ├── docker_guide.md     # Team Docker integration manual
-│   ├── team_workflow.md    # 4-member role checklist & YouTube tutorials
-│   └── team_workflow.html  # Interactive visual workflow guide
-├── public/                 # Static assets, hero imagery, and icons
-│   └── images/
-├── src/                    # Application source code
-│   ├── components/         # React UI modules for Pillars 1, 2, 3, 4 & Dashboard
-│   ├── data/               # Mangrove GIS boundaries & mock projects
-│   ├── services/           # Satellite auditor, spatial validator, certificate generator
-│   └── types/              # TypeScript interface definitions
-├── docker-compose.yml      # Multi-service container orchestrator
-├── package.json            # Dependencies and scripts
-└── vite.config.ts          # Vite build configuration
+├── .dockerignore              # Docker build exclusions
+├── .env.example               # Environment variables template
+├── .gitignore                 # Monorepo git ignore rules
+├── docker-compose.yml         # Multi-service container orchestrator
+├── package.json               # Root workspace runner & orchestration scripts
+├── README.md                  # Project overview and quick start guide
+│
+├── frontend/                  # React + TypeScript + Vite Web Application
+│   ├── public/                # Static assets, hero imagery, and icons
+│   ├── src/                   # React UI modules (Pillars 1–4, Maps, Dashboard)
+│   ├── index.html             # HTML entry point
+│   ├── package.json           # Frontend dependencies & scripts
+│   ├── tailwind.config.js     # Tailwind styling configuration
+│   ├── tsconfig.json          # TypeScript compiler config
+│   └── vite.config.ts         # Vite build configuration
+│
+├── backend/                   # Python FastAPI Geospatial MRV Microservice
+│   ├── data/                  # Smithsonian CCN coastal core GIS dataset
+│   ├── services/              # Satellite MRV, spatial geometry, IPFS pinning
+│   ├── tests/                 # Pytest automated test suites
+│   ├── Dockerfile             # Backend container definition
+│   ├── main.py                # FastAPI REST endpoints
+│   ├── models.py              # Pydantic schemas & SQLite models
+│   └── requirements.txt       # Python dependencies
+│
+├── blockchain/                # Solidity Smart Contracts & Polygon Amoy Pipelines
+│   ├── contracts/             # ERC-1155 AegisBlueCarbonCredit contract
+│   ├── deployments/           # Polygon Amoy & local deployment records
+│   ├── scripts/               # Hardhat deployment & verification pipelines
+│   ├── test/                  # Contract unit tests (34 test cases)
+│   ├── hardhat.config.cjs     # Hardhat compiler & network config
+│   └── package.json           # Web3 dependencies (Hardhat, Ethers, OpenZeppelin)
+│
+├── docker/                    # Docker & Nginx Production Configuration
+│   ├── Dockerfile             # Multi-stage optimized frontend build
+│   └── nginx.conf             # Production Nginx reverse proxy
+│
+└── docs/                      # Technical Documentation & Guides
+    ├── TECH_STACK.md          # Architecture & technology specifications
+    ├── docker_guide.md        # Team Docker integration manual
+    ├── team_workflow.md       # 4-member role checklist & YouTube tutorials
+    └── team_workflow.html     # Interactive visual workflow guide
 ```
 
 ---
@@ -93,13 +118,21 @@ npm install
 npm run dev
 
 # Open in browser: http://localhost:5173
+
+# Run contract tests
+npm run test:contracts
+
+# Run backend tests
+npm run test:backend
 ```
 
 ---
 
 ## 👥 Team Carbon Documentation
 
-For detailed role assignments, YouTube video links, and step-by-step checklists:
+For detailed architecture, role assignments, YouTube video links, and step-by-step checklists:
+* 🌊 **[Technology Stack & Architecture Specification](docs/TECH_STACK.md)**
 * 📖 **[Team Workflow Guide](docs/team_workflow.md)**
 * 🐳 **[Docker Integration Guide](docs/docker_guide.md)**
 * 🌐 **[Visual Workflow HTML](docs/team_workflow.html)**
+

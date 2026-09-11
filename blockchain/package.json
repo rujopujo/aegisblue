@@ -1,0 +1,18 @@
+{
+  "name": "aegisblue-blockchain",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy:amoy": "hardhat run scripts/deploy.cjs --network amoy",
+    "verify:amoy": "hardhat run scripts/verify-amoy-readonly.cjs --network amoy"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.29.1"
+  }
+}

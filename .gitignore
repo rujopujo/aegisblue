@@ -1,11 +1,15 @@
 # Dependencies
-node_modules
+node_modules/
+frontend/node_modules/
+blockchain/node_modules/
 /.pnp
 .pnp.js
 
 # Production build artifacts
-dist
-dist-ssr
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
 *.local
 
 # Logs
@@ -42,9 +46,14 @@ venv/
 .venv/
 *.db
 *.sqlite3
+.pytest_cache/
 
 # Hardhat
 artifacts/
 cache/
 typechain/
 typechain-types/
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain/
+blockchain/typechain-types/
