@@ -57,3 +57,9 @@ blockchain/artifacts/
 blockchain/cache/
 blockchain/typechain/
 blockchain/typechain-types/
+
+# Sensitive & internal documents
+MEMBER_4_GUIDE.md
+TEAM_CARBON_WORKFLOW.pdf
+pdf_text.txt
+*.tsbuildinfo

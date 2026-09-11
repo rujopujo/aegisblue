@@ -407,7 +407,7 @@ export function App() {
       {/* ESG Certificate Modal */}
       <ESGCertificateModal
         record={selectedRetirement}
-        project={projects.find((p) => p.id === selectedRetirement?.projectId)}
+        project={projects.find((p) => p.id === selectedRetirement?.projectId) || null}
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
         onNavigateVerify={handleNavigateVerify}
