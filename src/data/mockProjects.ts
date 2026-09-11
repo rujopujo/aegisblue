@@ -1,183 +1,161 @@
-import { TokenizedProject, RetirementRecord } from '../types';
-import { GMW_MANGROVE_ZONES } from './gmwBoundaries';
-import { computeCarbonAudit, fetchSentinel2Data } from '../services/satelliteAuditor';
-import { createIPFSPackage, mintCarbonTokens } from '../services/web3Registry';
-import { validateBoundaryAgainstGMW } from '../services/spatialValidator';
+﻿import { CarbonProject, OffsetOrder } from '../types/marketplace';
 
-export function initializeMockProjects(): TokenizedProject[] {
-  // Project 1: Sundarbans Delta Restoration
-  const sunCoords: [number, number][] = [
-    [21.88, 88.73],
-    [21.88, 88.78],
-    [21.93, 88.78],
-    [21.93, 88.73],
-    [21.88, 88.73],
-  ];
-  const sunSpectral = fetchSentinel2Data(sunCoords[0], 450);
-  const sunAudit = computeCarbonAudit(sunSpectral, 450, 0.88);
-  const sunBoundary = validateBoundaryAgainstGMW(sunCoords);
-  const sunIpfs = createIPFSPackage(
-    'PROJ-SUN-2026-01',
-    'Sundarbans Core Tiger Reserve Blue Carbon Restoration',
-    'Sundarbans Mangrove Climate Alliance (SMCA)',
-    sunCoords,
-    450,
-    GMW_MANGROVE_ZONES[0].id,
-    sunSpectral,
-    sunAudit
-  );
-
-  const proj1 = mintCarbonTokens({
-    id: 'PROJ-SUN-2026-01',
-    name: 'Sundarbans Core Tiger Reserve Blue Carbon Restoration',
-    ngoName: 'Sundarbans Mangrove Climate Alliance (SMCA)',
-    ngoWallet: '0x3B88e63F9D661d9a244C3A73Ec5D875F7925e510',
-    ngoRegistrationNo: 'WB-NGO-ENV-2021-9941',
-    locationName: 'Sundarbans Biosphere Reserve, West Bengal',
-    coordinates: sunCoords,
-    areaHectares: 450,
-    boundaryResult: sunBoundary,
-    spectralData: sunSpectral,
-    carbonMetrics: sunAudit,
-    ipfs: sunIpfs,
-    pricePerTonUSD: 32.0,
-    coBenefits: [
-      'Royal Bengal Tiger & Fishing Cat Habitat Refuge',
-      'Cyclone Storm-Surge Buffer for 180,000 Island Inhabitants',
-      'Sustainable Honey & Wild Fishery Co-op Livelihoods',
-      'Tidal Mudflat Sediment Accretion Monitoring'
-    ]
-  });
-
-  // Project 2: Pichavaram Estuarine Rhizophora Expansion
-  const picCoords: [number, number][] = [
-    [11.42, 79.77],
-    [11.42, 79.80],
-    [11.45, 79.80],
-    [11.45, 79.77],
-    [11.42, 79.77],
-  ];
-  const picSpectral = fetchSentinel2Data(picCoords[0], 180);
-  const picAudit = computeCarbonAudit(picSpectral, 180, 0.82);
-  const picBoundary = validateBoundaryAgainstGMW(picCoords);
-  const picIpfs = createIPFSPackage(
-    'AEGIS-PICHAVARAMESTUAR-180',
-    'Pichavaram Estuarine Rhizophora Expansion',
-    'Tamil Nadu Coastal Ecology Foundation',
-    picCoords,
-    180,
-    GMW_MANGROVE_ZONES[1].id,
-    picSpectral,
-    picAudit
-  );
-  picIpfs.cid = 'bafkreid3n64zywg4nud5z3oq2vla5fuiwa75pszuxpv7mjx4w3cxs5ezzq';
-  picIpfs.gatewayUrl = 'https://gateway.pinata.cloud/ipfs/bafkreid3n64zywg4nud5z3oq2vla5fuiwa75pszuxpv7mjx4w3cxs5ezzq';
-
-  const proj2 = mintCarbonTokens({
-    id: 'AEGIS-PICHAVARAMESTUAR-180',
-    name: 'Pichavaram Estuarine Rhizophora Expansion',
-    ngoName: 'Tamil Nadu Coastal Ecology Foundation',
-    ngoWallet: '0x5f05Afd47769c5d5e332b026D33883a004C2cc68',
-    ngoRegistrationNo: 'TN-COAST-SOC-2019-4412',
-    locationName: 'Pichavaram Mangrove Wetlands, Cuddalore, TN',
-    coordinates: picCoords,
-    areaHectares: 180,
-    boundaryResult: picBoundary,
-    spectralData: picSpectral,
-    carbonMetrics: picAudit,
-    ipfs: picIpfs,
-    pricePerTonUSD: 29.5,
-    coBenefits: [
-      'Prop-Root Habitat for Penaeid Prawns & Estuarine Fish',
-      'Tsunami & Wave Dissipation Coastal Barrier',
-      'Community Nursery & Eco-Tourism Stewardship'
-    ]
-  });
-
-  // Reference the verified on-chain Polygon Amoy ERC-1155 token
-  proj2.tokenization.tokenId = '7300511014531487208209184491691875089324748676569431105539752191596868391902';
-  proj2.tokenization.totalMinted = 100;
-  proj2.tokenization.availableCredits = 100;
-  proj2.tokenization.txHash = '0x5deb7af620ac53bad6fa6d9acb611605f7cab71ce1bb74b830de71b698c0217d';
-  proj2.tokenization.registrationTxHash = '0xb2942f936e9920acab30dea9f5bba856067e85949017fbb736b8662f605f1b90';
-  proj2.tokenization.blockNumber = 47242269;
-
-
-  // Project 3: Bhitarkanika Delta Blue Carbon Project
-  const bhiCoords: [number, number][] = [
-    [20.70, 86.89],
-    [20.70, 86.95],
-    [20.76, 86.95],
-    [20.76, 86.89],
-    [20.70, 86.89],
-  ];
-  const bhiSpectral = fetchSentinel2Data(bhiCoords[0], 310);
-  const bhiAudit = computeCarbonAudit(bhiSpectral, 310, 0.85);
-  const bhiBoundary = validateBoundaryAgainstGMW(bhiCoords);
-  const bhiIpfs = createIPFSPackage(
-    'PROJ-BHI-2026-03',
-    'Bhitarkanika Gahirmatha Tidal Carbon Sanctuary',
-    'Odisha Wetland Conservation Trust',
-    bhiCoords,
-    310,
-    GMW_MANGROVE_ZONES[2].id,
-    bhiSpectral,
-    bhiAudit
-  );
-
-  const proj3 = mintCarbonTokens({
-    id: 'PROJ-BHI-2026-03',
-    name: 'Bhitarkanika Gahirmatha Tidal Carbon Sanctuary',
-    ngoName: 'Odisha Wetland Conservation Trust',
-    ngoWallet: '0x5F19Ac92f6b57912E6B47C5E981e4b9f2913f019',
-    ngoRegistrationNo: 'OD-ENV-TR-2020-1092',
-    locationName: 'Bhitarkanika National Park, Odisha',
-    coordinates: bhiCoords,
-    areaHectares: 310,
-    boundaryResult: bhiBoundary,
-    spectralData: bhiSpectral,
-    carbonMetrics: bhiAudit,
-    ipfs: bhiIpfs,
-    pricePerTonUSD: 31.0,
-    coBenefits: [
-      'Olive Ridley Turtle Nesting Beach Buffer',
-      'Saltwater Crocodile Ecological Nursery',
-      'Deep Subtidal Organic Carbon Accretion'
-    ]
-  });
-
-  return [proj1, proj2, proj3];
-}
-
-export const INITIAL_RETIREMENTS: RetirementRecord[] = [
+export const INITIAL_PROJECTS: CarbonProject[] = [
   {
-    id: 'RET-884910',
-    projectId: 'PROJ-SUN-2026-01',
-    projectName: 'Sundarbans Core Tiger Reserve Blue Carbon Restoration',
-    companyName: 'Infosys ESG & Green Data Hubs',
-    companyWallet: '0x9924...D14E',
-    tonsRetired: 1250,
-    purpose: 'Scope 1 & 2 Neutralization for Bangalore Data Centers (Q1 2026)',
-    vintageYear: 2026,
-    txHash: '0x94f1c79a83b2e5917a4c6012e8b093fa71b29a01f5c381792d4b8e21a0f918e2',
-    burnReceiptBlock: 14892410,
-    retiredAt: '2026-08-20T10:14:00Z',
-    certificateId: 'ESG-NETZERO-INF992-2026',
-    ipfsCertificateCid: 'bafybeih442x9k2v7burninf992m8a1b5c2',
+    id: 'proj-001',
+    name: 'Sundarbans Delta Mangrove Restoration & Blue Sink',
+    code: 'BC-SBN-2026',
+    region: 'South 24 Parganas',
+    state: 'West Bengal',
+    country: 'India',
+    ecosystemType: 'Mangrove',
+    hectares: 14250,
+    totalTons: 124716,
+    availableTons: 88450,
+    pricePerTon: 28,
+    ndviScore: 0.84,
+    soilOrganicCarbon: 0.048,
+    auditScore: 98.4,
+    auditFingerprint: 'SHA256:8f4c2e179d6b5a31a980cff4b71239e564d2e8790cb98e1f574',
+    ipfsDossierCid: 'bafybeicg2kl5mvo7p3x98a2z4g7h3k4e21a7c88b90c1f2e3d4c5',
+    polygonTokenId: '124716',
+    polygonContractAddress: '0x37854BC5053746D4c23945a5575E718f4F733d31',
+    mintTxHash: '0x8f19da5640bf1456a73c52e46b9a89d7b43a29bc1e4d3a4b9101f2e3c4d5e6f7',
+    imageUrl: 'https://images.unsplash.com/photo-1544979590-37e9b47eb705?auto=format&fit=crop&w=1200&q=80',
+    description: 'High-density Rhizophora and Avicennia mangrove canopy in the UNESCO Sundarbans biosphere reserve. Scanned via Sentinel-2 Multispectral bands with Verified Soil Organic Carbon depth cores.',
+    registryStandard: 'SIH BlueCarbon Verra-VCS Aligned',
+    sdgGoals: [13, 14, 15, 8]
   },
   {
-    id: 'RET-884911',
-    projectId: 'PROJ-PIC-2026-02',
-    projectName: 'Pichavaram Estuarine Rhizophora Expansion',
-    companyName: 'Tata Motors Green Mobility Wing',
-    companyWallet: '0x43B2...88FA',
-    tonsRetired: 800,
-    purpose: 'Zero Emission EV Supply Chain Decarbonization Offset',
-    vintageYear: 2026,
-    txHash: '0x12c8a93e507b9148d2f1094ba72c019485b31f79c2a8e410b981f4a9238c11e4',
-    burnReceiptBlock: 14892550,
-    retiredAt: '2026-08-24T14:30:00Z',
-    certificateId: 'ESG-NETZERO-TAT43B-2026',
-    ipfsCertificateCid: 'bafybeic771v8m3w4burntat43bm1x9c3d4',
+    id: 'proj-002',
+    name: 'Bhitarkanika Tidal Wetland & Estuarine Carbon Reserve',
+    code: 'BC-BHT-2026',
+    region: 'Kendrapara District',
+    state: 'Odisha',
+    country: 'India',
+    ecosystemType: 'Tidal Wetland',
+    hectares: 8640,
+    totalTons: 76200,
+    availableTons: 54100,
+    pricePerTon: 26,
+    ndviScore: 0.79,
+    soilOrganicCarbon: 0.042,
+    auditScore: 96.1,
+    auditFingerprint: 'SHA256:4a8b7c9e0f123456789abcdef0123456789abcdef0123456789',
+    ipfsDossierCid: 'bafybeid9k2m5no8q4y09b3a5h8j4l5f32b8d99c01d2e3f4g5h6',
+    polygonTokenId: '76200',
+    polygonContractAddress: '0x37854BC5053746D4c23945a5575E718f4F733d31',
+    mintTxHash: '0x7e29cb4510af2345b84d63f57c0b90e8c54b30cd2f5e4b5c0212a3f4d5e6f7a8',
+    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    description: 'Vital salt-tolerant mangrove system and estuarine sanctuary protecting marine biodiversity and locking high-density organic carbon in tidal mudflats.',
+    registryStandard: 'SIH BlueCarbon Verra-VCS Aligned',
+    sdgGoals: [13, 14, 6, 15]
   },
+  {
+    id: 'proj-003',
+    name: 'Pichavaram Coastal Lagoon & Mangrove Forest',
+    code: 'BC-PCH-2026',
+    region: 'Cuddalore District',
+    state: 'Tamil Nadu',
+    country: 'India',
+    ecosystemType: 'Mangrove',
+    hectares: 4900,
+    totalTons: 41300,
+    availableTons: 19800,
+    pricePerTon: 30,
+    ndviScore: 0.81,
+    soilOrganicCarbon: 0.039,
+    auditScore: 94.7,
+    auditFingerprint: 'SHA256:1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b',
+    ipfsDossierCid: 'bafybeie8j1k4m9o2p5z8w1x6a7c9f2b3c4d5e6f7a8b9c0d1e2f',
+    polygonTokenId: '41300',
+    polygonContractAddress: '0x37854BC5053746D4c23945a5575E718f4F733d31',
+    mintTxHash: '0x6a18cb3401fe1234c95e74f68d1c80f9d65c41de3e4f5a6b1323b4e5f6a7b8c9',
+    imageUrl: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80',
+    description: 'One of the largest mangrove ecosystems in India with 400+ water channels. Extraordinary blue carbon sequestration potential verified against CCN coastal depth series.',
+    registryStandard: 'Gold Standard & Verra Compatible',
+    sdgGoals: [13, 14, 15, 11]
+  },
+  {
+    id: 'proj-004',
+    name: 'Andaman Marine Archipelago Seagrass & Mangrove Fringe',
+    code: 'BC-AND-2026',
+    region: 'South Andaman Islands',
+    state: 'Andaman & Nicobar',
+    country: 'India',
+    ecosystemType: 'Seagrass Meadow',
+    hectares: 9200,
+    totalTons: 98500,
+    availableTons: 71200,
+    pricePerTon: 32,
+    ndviScore: 0.88,
+    soilOrganicCarbon: 0.054,
+    auditScore: 99.1,
+    auditFingerprint: 'SHA256:9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d',
+    ipfsDossierCid: 'bafybeif7h0i3l8m1o4y7z2w5a6b8e1a2b3c4d5e6f7a8b9c0d1e',
+    polygonTokenId: '98500',
+    polygonContractAddress: '0x37854BC5053746D4c23945a5575E718f4F733d31',
+    mintTxHash: '0x5b07da2312eb0123d84f63e57b2b70e8c54b30cd2f5e4b5c0212a3f4d5e6f7a8',
+    imageUrl: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1200&q=80',
+    description: 'Pristine island blue carbon reservoir combining dense intertidal mangroves and sub-tidal seagrass meadows, acting as an ultra-fast oceanic carbon sequester.',
+    registryStandard: 'SIH BlueCarbon Verra-VCS Aligned',
+    sdgGoals: [13, 14, 15, 17]
+  }
+];
+
+export const INITIAL_ORDERS: OffsetOrder[] = [
+  {
+    orderId: 'ORD-2026-9812',
+    projectId: 'proj-001',
+    projectName: 'Sundarbans Delta Mangrove Restoration & Blue Sink',
+    buyerCompany: 'Tata Steel Sustainability Division',
+    signatoryName: 'Rajesh Mukherjee',
+    corporateEmail: 'r.mukherjee@tatasteel.com',
+    tonsRetired: 2400,
+    pricePerTon: 28,
+    subtotal: 67200,
+    platformFee: 672,
+    totalAmount: 67872,
+    esgPurpose: 'FY 2025-26 Blast Furnace Scope 1 Mitigation',
+    retirementDate: '2026-09-08 14:32 UTC',
+    polygonBurnTxHash: '0x3a4b9101f2e3c4d5e6f78f19da5640bf1456a73c52e46b9a89d7b43a29bc1e4d',
+    certificateId: 'ESG-2026-BC-448102',
+    status: 'CONFIRMED'
+  },
+  {
+    orderId: 'ORD-2026-9813',
+    projectId: 'proj-003',
+    projectName: 'Pichavaram Coastal Lagoon & Mangrove Forest',
+    buyerCompany: 'Microsoft India Cloud Operations',
+    signatoryName: 'Ananya Sharma',
+    corporateEmail: 'ananya.s@microsoft.com',
+    tonsRetired: 1500,
+    pricePerTon: 30,
+    subtotal: 45000,
+    platformFee: 450,
+    totalAmount: 45450,
+    esgPurpose: 'Hyderabad HyperScale DataCenter Net-Zero 2030 Commitment',
+    retirementDate: '2026-09-09 11:18 UTC',
+    polygonBurnTxHash: '0x1e4d3a4b9101f2e3c4d5e6f78f19da5640bf1456a73c52e46b9a89d7b43a29bc',
+    certificateId: 'ESG-2026-BC-448103',
+    status: 'CONFIRMED'
+  },
+  {
+    orderId: 'ORD-2026-9814',
+    projectId: 'proj-002',
+    projectName: 'Bhitarkanika Tidal Wetland & Estuarine Carbon Reserve',
+    buyerCompany: 'Delta Air Lines Global ESG',
+    signatoryName: 'Marcus Vance',
+    corporateEmail: 'm.vance@delta.com',
+    tonsRetired: 3800,
+    pricePerTon: 26,
+    subtotal: 98800,
+    platformFee: 988,
+    totalAmount: 99788,
+    esgPurpose: 'International Long-Haul Fleet Carbon Compensation',
+    retirementDate: '2026-09-10 16:45 UTC',
+    polygonBurnTxHash: '0x4d5e6f78f19da5640bf1456a73c52e46b9a89d7b43a29bc1e4d3a4b9101f2e3c',
+    certificateId: 'ESG-2026-BC-448104',
+    status: 'CONFIRMED'
+  }
 ];
