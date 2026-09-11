@@ -20,6 +20,12 @@ lerna-debug.log*
 .env.*
 !.env.example
 
+# System generated & internal docs
+MEMBER_4_GUIDE.md
+TEAM_CARBON_WORKFLOW.pdf
+pdf_text.txt
+extracted_pdf_text.txt files
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
