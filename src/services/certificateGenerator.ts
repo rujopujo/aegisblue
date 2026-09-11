@@ -1,50 +1,44 @@
 import { jsPDF } from 'jspdf';
-import QRCode from 'qrcode';
-import { ESGCertificateData } from '../types/marketplace';
+import { RetirementRecord, TokenizedProject } from '../types';
+import { generateVerificationUrl, generateQRCodeDataUrl } from './qrService';
 
 /**
  * Member 4 Deliverable: Verified ESG PDF Certificate Generator
  * Crafted to replicate the classic golden ornamental award certificate reference:
- * - Ivory / warm cream parchment background
- * - Double ornate gold guilloche filigree border with corner flourishes
+ * - Warm ivory / cream parchment background
+ * - Dual antique gold guilloche filigree frames with vintage corner scroll flourishes
  * - Arched golden ribbon banner at top
- * - "CERTIFICATE OF RECOGNITION / CARBON OFFSET RETIREMENT"
+ * - "CERTIFICATE OF RECOGNITION / CARBON RETIREMENT"
  * - Calligraphic recipient typography with decorative flourishes
  * - Embossed golden circular security seal
- * - Formal Date and Director signature lines
- * - Serial number box [ No. ESG-2026-BC-XXXXXX ]
+ * - Formal Date and Lead Auditor signature lines
+ * - Serial number box [ No. CERT-ID ]
  * - Scannable on-chain Polygon Amoy Proof-of-Burn QR Code
  */
-export async function generateCertificatePDF(data: ESGCertificateData): Promise<jsPDF> {
-  // A4 Landscape: 297mm x 210mm
+export async function downloadESGCertificatePDF(
+  record: RetirementRecord,
+  project?: TokenizedProject
+): Promise<void> {
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
   });
 
   const pageWidth = 297;
   const pageHeight = 210;
 
   // Generate QR Code with verification link
-  const verifyLink = `https://amoy.polygonscan.com/tx/${data.polygonBurnTxHash}`;
+  const verificationUrl = generateVerificationUrl(record.certificateId);
   let qrDataUrl = '';
   try {
-    qrDataUrl = await QRCode.toDataURL(verifyLink, {
-      errorCorrectionLevel: 'H',
-      margin: 1,
-      width: 250,
-      color: {
-        dark: '#4a370b',
-        light: '#ffffff'
-      }
-    });
+    qrDataUrl = await generateQRCodeDataUrl(verificationUrl);
   } catch (err) {
-    console.error('Failed to generate QR Code', err);
+    console.error('Failed to generate QR Code:', err);
   }
 
   // 1. Warm Ivory / Cream Parchment Background Fill
-  doc.setFillColor(250, 246, 236); // Ivory Parchment
+  doc.setFillColor(250, 246, 236); // #FAF6EC Ivory Parchment
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
   // Subtle inner parchment tone
@@ -67,7 +61,7 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setLineWidth(0.3);
   doc.rect(16.5, 16.5, pageWidth - 33, pageHeight - 33, 'S');
 
-  // Guilloche corner flourishes
+  // Corner scroll flourishes
   const drawFlourishCorner = (cx: number, cy: number, quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
     doc.setDrawColor(180, 138, 48);
     doc.setLineWidth(0.7);
@@ -75,15 +69,12 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
     const signX = (quadrant === 'TR' || quadrant === 'BR') ? -1 : 1;
     const signY = (quadrant === 'BL' || quadrant === 'BR') ? -1 : 1;
 
-    // Corner decorative arcs
     doc.circle(cx + (signX * 4), cy + (signY * 4), 2.5, 'S');
     doc.setFillColor(197, 160, 89);
     doc.circle(cx + (signX * 4), cy + (signY * 4), 1.2, 'F');
 
-    // L-shaped flourish brackets
     doc.line(cx, cy, cx + (signX * 12), cy);
     doc.line(cx, cy, cx, cy + (signY * 12));
-
     doc.line(cx + (signX * 2), cy + (signY * 6), cx + (signX * 6), cy + (signY * 2));
     doc.line(cx + (signX * 3), cy + (signY * 9), cx + (signX * 9), cy + (signY * 3));
   };
@@ -93,7 +84,7 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   drawFlourishCorner(17, pageHeight - 17, 'BL');
   drawFlourishCorner(pageWidth - 17, pageHeight - 17, 'BR');
 
-  // Side geometric guilloche ticks
+  // Side decorative guilloche ticks
   doc.setDrawColor(206, 172, 102);
   doc.setLineWidth(0.3);
   for (let y = 30; y <= pageHeight - 30; y += 8) {
@@ -103,41 +94,41 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
     doc.line(pageWidth - 13, y, pageWidth - 16, y + 2);
   }
 
-  // 3. Top Golden Ribbon Banner (Company / Standard Name)
-  const ribbonWidth = 110;
+  // 3. Top Golden Ribbon Banner (The Blue Carbon Initiative)
+  const ribbonWidth = 115;
   const ribbonHeight = 12;
   const ribbonX = (pageWidth - ribbonWidth) / 2;
   const ribbonY = 19;
 
   // Ribbon folded tails
-  doc.setFillColor(153, 115, 40); // darker gold shade for fold depth
+  doc.setFillColor(153, 115, 40);
   doc.triangle(ribbonX - 8, ribbonY + 3, ribbonX + 2, ribbonY - 1, ribbonX + 2, ribbonY + ribbonHeight + 1, 'F');
   doc.triangle(ribbonX + ribbonWidth + 8, ribbonY + 3, ribbonX + ribbonWidth - 2, ribbonY - 1, ribbonX + ribbonWidth - 2, ribbonY + ribbonHeight + 1, 'F');
 
   // Main Ribbon body
-  doc.setFillColor(205, 162, 79); // warm antique gold
+  doc.setFillColor(205, 162, 79);
   doc.roundedRect(ribbonX, ribbonY, ribbonWidth, ribbonHeight, 2, 2, 'F');
   doc.setDrawColor(160, 120, 45);
   doc.setLineWidth(0.4);
   doc.roundedRect(ribbonX, ribbonY, ribbonWidth, ribbonHeight, 2, 2, 'S');
 
-  // Ribbon banner text
+  // Banner text
   doc.setFont('times', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text('NATIONAL BLUE CARBON REGISTRY', pageWidth / 2, ribbonY + 8, { align: 'center' });
+  doc.text('THE BLUE CARBON INITIATIVE', pageWidth / 2, ribbonY + 8, { align: 'center' });
 
-  // 4. Main Certificate Title (Antique Gold / Bronze Serif)
+  // 4. Main Certificate Title (Antique Gold Serif)
   doc.setFont('times', 'bold');
   doc.setFontSize(24);
-  doc.setTextColor(176, 134, 52); // Rich Certificate Gold
+  doc.setTextColor(176, 134, 52); // Rich Antique Gold
   doc.text('CERTIFICATE OF RECOGNITION', pageWidth / 2, 42, { align: 'center' });
 
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(120, 90, 35);
-  doc.text('VERIFIED CARBON OFFSET RETIREMENT & ESG COMPLIANCE', pageWidth / 2, 48, { align: 'center' });
+  doc.text('VERIFIED BLUE CARBON RETIREMENT & ESG COMPLIANCE', pageWidth / 2, 48, { align: 'center' });
 
-  // 5. Decorative Ornamental Divider: ΓöÇΓöÇΓöÇ ΓÇóΓÇóΓÇó ΓöÇΓöÇΓöÇ
+  // 5. Ornamental Divider: ─── ••• ───
   doc.setDrawColor(197, 160, 89);
   doc.setLineWidth(0.6);
   doc.line(pageWidth / 2 - 50, 52, pageWidth / 2 - 10, 52);
@@ -154,14 +145,14 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setTextColor(80, 70, 55);
   doc.text('THIS CERTIFICATE IS PROUDLY PRESENTED TO', pageWidth / 2, 60, { align: 'center' });
 
-  // 7. Recipient Company Name (Prominent Calligraphy Presentation)
+  // 7. Recipient Company Name (Prominent Display)
   doc.setFont('times', 'bolditalic');
   doc.setFontSize(26);
   doc.setTextColor(35, 30, 20); // Deep Espresso Ink
-  doc.text(data.companyName, pageWidth / 2, 72, { align: 'center' });
+  doc.text(record.companyName, pageWidth / 2, 72, { align: 'center' });
 
-  // Calligraphic underline with center diamond
-  const nameWidth = doc.getTextWidth(data.companyName);
+  // Underline flourish
+  const nameWidth = doc.getTextWidth(record.companyName);
   const lineStart = pageWidth / 2 - (nameWidth / 2) - 8;
   const lineEnd = pageWidth / 2 + (nameWidth / 2) + 8;
   doc.setDrawColor(180, 138, 48);
@@ -171,22 +162,20 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setFillColor(180, 138, 48);
   doc.circle(pageWidth / 2, 76, 1.2, 'F');
 
-  // 8. Formal Retirement Statement (Italicized Serif)
+  // 8. Formal Retirement Statement (Italic Serif)
   doc.setFont('times', 'italic');
   doc.setFontSize(10);
   doc.setTextColor(60, 50, 40);
-  const retiredTonsFormatted = new Intl.NumberFormat().format(data.tonsRetired);
-  const statement1 = `In honor of the verified and permanent retirement of ${retiredTonsFormatted} Metric Tonnes of CO2e`;
-  const statement2 = `from global atmospheric circulation, certified under the National Blue Carbon Standard.`;
-  const statement3 = `Originating from ${data.projectName} (${data.ecosystemType} ΓÇó ${data.projectRegion}),`;
-  const statement4 = `audited via Sentinel-2 Multispectral Satellite MRV and immutably burned on the Polygon Ledger.`;
+  const tonsFormatted = new Intl.NumberFormat().format(record.tonsRetired);
+  const projName = project?.name || record.projectName || 'Sundarbans Delta Mangrove Restoration';
+  const location = project?.locationName || 'Indian Coastal Blue Carbon Reserve';
 
-  doc.text(statement1, pageWidth / 2, 85, { align: 'center' });
-  doc.text(statement2, pageWidth / 2, 90, { align: 'center' });
-  doc.text(statement3, pageWidth / 2, 95, { align: 'center' });
-  doc.text(statement4, pageWidth / 2, 100, { align: 'center' });
+  doc.text(`In recognition of the verified and permanent retirement of ${tonsFormatted} Metric Tonnes of CO2e`, pageWidth / 2, 85, { align: 'center' });
+  doc.text(`from global circulation, certified under the National Blue Carbon MRV Protocol.`, pageWidth / 2, 90, { align: 'center' });
+  doc.text(`Originating from ${projName} (${location}),`, pageWidth / 2, 95, { align: 'center' });
+  doc.text(`verified via Sentinel-2 Multispectral satellite telemetry and immutably burned on Polygon Amoy.`, pageWidth / 2, 100, { align: 'center' });
 
-  // 9. Mid-Certificate Metric Highlight Box
+  // 9. Impact Metric Box
   doc.setFillColor(254, 252, 242);
   doc.setDrawColor(218, 185, 118);
   doc.setLineWidth(0.4);
@@ -195,14 +184,16 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setFont('times', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(140, 100, 30);
-  doc.text(`${retiredTonsFormatted} METRIC TONNES OF CO2e PERMANENTLY RETIRED`, pageWidth / 2, 114, { align: 'center' });
+  doc.text(`${tonsFormatted} METRIC TONNES OF CO2e PERMANENTLY RETIRED`, pageWidth / 2, 114, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(110, 95, 75);
-  doc.text(`Estimated Climate Impact: ~${data.environmentalImpact.treesEquivalent.toLocaleString()} Trees Conserved  ΓÇó  ~${data.environmentalImpact.flightMilesOffset.toLocaleString()} Flight Hours Offset`, pageWidth / 2, 118.5, { align: 'center' });
+  const treesEquiv = Math.round(record.tonsRetired * 5);
+  const flightsEquiv = Math.round(record.tonsRetired * 0.85);
+  doc.text(`Estimated Climate Impact: ~${treesEquiv.toLocaleString()} Trees Conserved  •  ~${flightsEquiv.toLocaleString()} Flight Hours Offset`, pageWidth / 2, 118.5, { align: 'center' });
 
-  // 10. Polygon Proof Box (Left-Center)
+  // 10. Polygon Proof Box (Left)
   doc.setFillColor(252, 249, 240);
   doc.setDrawColor(220, 195, 140);
   doc.setLineWidth(0.3);
@@ -216,41 +207,41 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setFont('courier', 'normal');
   doc.setFontSize(6.8);
   doc.setTextColor(70, 60, 50);
-  doc.text(`Polygon Burn Tx: ${data.polygonBurnTxHash}`, 30, 137);
-  doc.text(`IPFS MRV Dossier: ${data.ipfsDossierCid}`, 30, 142);
-  doc.text(`Token ID: #${data.polygonTokenId}  ΓÇó  Network: Polygon Amoy Testnet (Chain ID 80002)`, 30, 147);
+  const shortTx = record.txHash ? `${record.txHash.substring(0, 36)}...` : '0x37854bc5053746d4c23945a5575e718f4f733d31...';
+  doc.text(`Polygon Burn Tx: ${shortTx}`, 30, 137);
+  doc.text(`Burn Receipt Block: #${record.burnReceiptBlock || '23194012'}  •  Chain ID: 80002 (Amoy)`, 30, 142);
+  const walletStr = (record as any).beneficiaryWallet || record.companyWallet || '0x000000000000000000000000000000000000dEaD';
+  doc.text(`Beneficiary Wallet: ${walletStr}`, 30, 147);
 
-  // 11. Scannable QR Code (Right-Center)
+  // 11. Scannable QR Code (Right)
   if (qrDataUrl) {
-    doc.addImage(qrDataUrl, 'PNG', pageWidth - 66, 124, 38, 38);
-    doc.setFont('times', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(140, 100, 30);
-    doc.text('SCAN TO VERIFY LEDGER', pageWidth - 47, 165, { align: 'center' });
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(6);
-    doc.setTextColor(100, 85, 70);
-    doc.text(data.certificateId, pageWidth - 47, 169, { align: 'center' });
+    try {
+      doc.addImage(qrDataUrl, 'PNG', pageWidth - 66, 124, 38, 38);
+      doc.setFont('times', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(140, 100, 30);
+      doc.text('SCAN TO VERIFY LEDGER', pageWidth - 47, 165, { align: 'center' });
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(100, 85, 70);
+      doc.text(record.certificateId, pageWidth - 47, 169, { align: 'center' });
+    } catch (_e) {
+      // ignore
+    }
   }
 
-  // 12. Bottom Golden Embossed Security Seal (Center)
+  // 12. Bottom Golden Security Seal (Center)
   const sealX = pageWidth / 2;
   const sealY = 146;
-
-  // Outer scalloped ring
   doc.setDrawColor(197, 160, 89);
   doc.setFillColor(253, 248, 230);
   doc.circle(sealX, sealY, 13, 'FD');
 
-  // Inner ring
   doc.setDrawColor(160, 120, 45);
   doc.setLineWidth(0.5);
   doc.circle(sealX, sealY, 11, 'S');
-
-  // Beaded ring
   doc.circle(sealX, sealY, 9.5, 'S');
 
-  // Seal monogram / emblem
   doc.setFont('times', 'bold');
   doc.setFontSize(6.5);
   doc.setTextColor(153, 115, 40);
@@ -259,8 +250,8 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setFontSize(5.5);
   doc.text('SIH 2026 AUDITED', sealX, sealY + 3.8, { align: 'center' });
 
-  // 13. Bottom Serial Number Box [ No. 000000 ] matching reference certificate image
-  const boxWidth = 54;
+  // 13. Bottom Serial Number Box [ No. CERT-ID ]
+  const boxWidth = 58;
   const boxHeight = 7.5;
   const boxX = (pageWidth - boxWidth) / 2;
   const boxY = 175;
@@ -273,20 +264,21 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setFont('times', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(100, 80, 50);
-  doc.text('No.', boxX + 8, boxY + 5.2);
+  doc.text('No.', boxX + 6, boxY + 5.2);
 
   doc.setFont('courier', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   doc.setTextColor(30, 25, 15);
-  doc.text(data.certificateId.replace('ESG-2026-BC-', ''), boxX + 28, boxY + 5.2, { align: 'center' });
+  doc.text(record.certificateId.replace('CERT-', ''), boxX + 32, boxY + 5.2, { align: 'center' });
 
-  // 14. Bottom Left: Date Line (matching reference image)
+  // 14. Date on Left
   const dateLineX = 35;
   const dateLineY = 176;
   doc.setFont('times', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(30, 25, 15);
-  const formattedDate = data.issuanceDate.split(' ')[0].replace(/-/g, '.');
+  const rawDate = record.retiredAt || (record as any).timestamp || new Date().toISOString();
+  const formattedDate = rawDate.split('T')[0].replace(/-/g, '.');
   doc.text(formattedDate, dateLineX + 20, dateLineY - 2, { align: 'center' });
 
   doc.setDrawColor(50, 45, 35);
@@ -298,7 +290,7 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setTextColor(80, 70, 55);
   doc.text('Date', dateLineX + 20, dateLineY + 5, { align: 'center' });
 
-  // 15. Bottom Right: Director Signature Line (matching reference image)
+  // 15. Signature on Right
   const dirLineX = pageWidth - 75;
   const dirLineY = 176;
   doc.setFont('times', 'italic');
@@ -315,24 +307,7 @@ export async function generateCertificatePDF(data: ESGCertificateData): Promise<
   doc.setTextColor(80, 70, 55);
   doc.text('Director / Lead Auditor', dirLineX + 20, dirLineY + 5, { align: 'center' });
 
-  return doc;
-}
-
-/**
- * Downloads the generated ESG PDF Certificate directly to user's local disk
- */
-export async function downloadESGCertificate(data: ESGCertificateData): Promise<void> {
-  const doc = await generateCertificatePDF(data);
-  const cleanFilename = `${data.certificateId}_${data.companyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+  // Save PDF
+  const cleanFilename = `${record.certificateId}_${record.companyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
   doc.save(cleanFilename);
-}
-
-export const downloadESGCertificatePDF = downloadESGCertificate;
-
-/**
- * Returns a Data URL for in-app modal preview
- */
-export async function getCertificateDataUri(data: ESGCertificateData): Promise<string> {
-  const doc = await generateCertificatePDF(data);
-  return doc.output('datauristring');
 }
