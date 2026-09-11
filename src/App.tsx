@@ -321,13 +321,13 @@ export function App() {
         )}
 
         {activeTab === 'pillar1' && (
-          <div className="bg-[#050B18] min-h-screen text-white py-6">
+          <div className="bg-[#F8FAF9] min-h-screen text-slate-800 py-6">
             <Pillar1_Registration onBoundaryVerified={handleBoundaryVerified} />
           </div>
         )}
 
         {activeTab === 'pillar2' && (
-          <div className="bg-[#050B18] min-h-screen text-white py-6">
+          <div className="bg-[#F8FAF9] min-h-screen text-slate-800 py-6">
             <Pillar2_Auditing
               projectData={activePillar1Project}
               onAuditCompleted={handleAuditCompleted}
@@ -336,7 +336,7 @@ export function App() {
         )}
 
         {activeTab === 'pillar3' && (
-          <div className="bg-[#050B18] min-h-screen text-white py-6">
+          <div className="bg-[#F8FAF9] min-h-screen text-slate-800 py-6">
             <Pillar3_Tokenization
               projectData={activePillar1Project}
               auditData={
@@ -382,7 +382,7 @@ export function App() {
         )}
 
         {activeTab === 'pillar4' && (
-          <div className="bg-[#050B18] min-h-screen text-white py-6">
+          <div className="bg-[#F8FAF9] min-h-screen text-slate-800 py-6">
             <Pillar4_Marketplace
               projects={projects}
               onRetireCredits={handleRetireCredits}
@@ -393,7 +393,7 @@ export function App() {
         )}
 
         {activeTab === 'dashboard' && (
-          <div className="bg-[#050B18] min-h-screen text-white py-6">
+          <div className="bg-[#F8FAF9] min-h-screen text-slate-800 py-6">
             <EnterpriseDashboard
               retirements={retirements}
               projects={projects}
@@ -407,7 +407,7 @@ export function App() {
       {/* ESG Certificate Modal */}
       <ESGCertificateModal
         record={selectedRetirement}
-        project={projects.find((p) => p.id === selectedRetirement?.projectId)}
+        project={projects.find((p) => p.id === selectedRetirement?.projectId) || null}
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
         onNavigateVerify={handleNavigateVerify}
