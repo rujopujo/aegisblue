@@ -1,5 +1,6 @@
-import { LatLng, BoundaryCheckResult, MangrovePolygon } from '../types';
+import { LatLng, BoundaryCheckResult, MangrovePolygon, CcnCoreSampleInfo } from '../types';
 import { GMW_MANGROVE_ZONES } from '../data/gmwBoundaries';
+import { CCN_CORE_STATIONS, CcnCoreStation } from '../data/ccnStations';
 
 /**
  * Checks if a point [lat, lng] is inside a polygon using the Ray-Casting algorithm.
@@ -110,6 +111,32 @@ export function getBoundingBox(coords: LatLng[]) {
 }
 
 /**
+ * Finds the nearest Smithsonian CCN Soil Core Station to a given LatLng coordinate.
+ */
+export function findNearestCcnStation(
+  point: LatLng
+): { station: CcnCoreStation; distanceKm: number } | null {
+  if (!CCN_CORE_STATIONS || CCN_CORE_STATIONS.length === 0) return null;
+
+  let nearestStation: CcnCoreStation = CCN_CORE_STATIONS[0];
+  let minDistance = calculateHaversineDistanceKm(point, [nearestStation.latitude, nearestStation.longitude]);
+
+  for (let i = 1; i < CCN_CORE_STATIONS.length; i++) {
+    const station = CCN_CORE_STATIONS[i];
+    const dist = calculateHaversineDistanceKm(point, [station.latitude, station.longitude]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestStation = station;
+    }
+  }
+
+  return {
+    station: nearestStation,
+    distanceKm: Math.round(minDistance * 10) / 10,
+  };
+}
+
+/**
  * Anti-Fraud Gatekeeper:
  * Validates pinned coordinates or drawn project polygon against official Global Mangrove Watch (GMW) zones.
  */
@@ -197,12 +224,31 @@ export function validateBoundaryAgainstGMW(
   const overlapPct = bestOverlapPct;
   const warnings: string[] = [];
 
+  // Ground-Truth Scientific Reference: Lookup nearest Smithsonian CCN sediment core
+  const nearestCcn = findNearestCcnStation(centroid);
+  const nearestCcnCore: CcnCoreSampleInfo | undefined =
+    nearestCcn && nearestCcn.distanceKm <= 250
+      ? {
+          coreId: nearestCcn.station.coreId,
+          stationName: nearestCcn.station.stationName,
+          region: nearestCcn.station.region,
+          distanceKm: nearestCcn.distanceKm,
+          samplingDepthCm: nearestCcn.station.samplingDepthCm,
+          soilCarbonStock_tC_ha: nearestCcn.station.soilCarbonStock_tC_ha,
+          dominantSpecies: nearestCcn.station.dominantSpecies,
+          institution: nearestCcn.station.institution,
+          doi: nearestCcn.station.doi,
+          referenceDataset: 'Smithsonian Coastal Carbon Network (CCN)',
+        }
+      : undefined;
+
   // Gatekeeper Decision Rules
   if (overlapPct >= 75 && matchedZone) {
     return {
       isValid: true,
       overlapPercentage: overlapPct,
       matchedGmwZone: matchedZone,
+      nearestCcnCore,
       totalAreaHa: totalAreaHa || 120.5,
       warnings,
       spatialConfidence: 98.4,
@@ -217,6 +263,7 @@ export function validateBoundaryAgainstGMW(
       isValid: true,
       overlapPercentage: overlapPct,
       matchedGmwZone: matchedZone,
+      nearestCcnCore,
       totalAreaHa: totalAreaHa || 85.0,
       warnings,
       spatialConfidence: 84.2,

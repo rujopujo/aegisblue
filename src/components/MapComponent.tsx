@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Polygon, Polyline, Marker, Popup, useMap, useM
 import L from 'leaflet';
 import { LatLng } from '../types';
 import { GMW_MANGROVE_ZONES } from '../data/gmwBoundaries';
+import { CCN_CORE_STATIONS } from '../data/ccnStations';
+import { findNearestCcnStation } from '../services/spatialValidator';
 import { Crosshair } from 'lucide-react';
 
 // Custom Map Marker Icons using SVGs
@@ -36,6 +38,29 @@ const createVertexIcon = (index: number, isFirst: boolean, canClose: boolean) =>
     </div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
+  });
+};
+
+// Custom Smithsonian CCN Soil Core Marker Icon (Gold/Amber scientific lab badge with glowing halo)
+const createCcnCoreIcon = (stockVal: number) => {
+  return L.divIcon({
+    className: 'ccn-core-pin',
+    html: `<div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; cursor: pointer; pointer-events: auto;">
+      <div style="position: relative; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 2px solid #fef3c7; box-shadow: 0 0 14px rgba(245, 158, 11, 0.85), 0 2px 8px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: #ffffff;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2v7.31M14 2v7.31"/>
+          <path d="M8.5 2h7"/>
+          <path d="M14 9.3a6.5 6.5 0 1 1-4 0"/>
+          <path d="M5.52 16h12.96"/>
+        </svg>
+      </div>
+      <div style="background: rgba(15, 23, 42, 0.95); color: #fbbf24; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.6); white-space: nowrap; margin-top: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); font-family: monospace;">
+        ${stockVal} tC/ha
+      </div>
+    </div>`,
+    iconSize: [30, 46],
+    iconAnchor: [15, 46],
+    popupAnchor: [0, -46],
   });
 };
 
@@ -86,6 +111,8 @@ interface MapComponentProps {
   onSelectCoordinates?: (coords: LatLng) => void;
   showGMWLayers?: boolean;
   selectedGmwZoneId?: string;
+  showCcnLayers?: boolean;
+  onToggleCcnLayers?: () => void;
   heightClass?: string;
   projectName?: string;
   // Multi-Vertex Polygon Drawing Mode Props
@@ -104,6 +131,8 @@ export const MapComponent: FC<MapComponentProps> = ({
   onSelectCoordinates,
   showGMWLayers = true,
   selectedGmwZoneId,
+  showCcnLayers = true,
+  onToggleCcnLayers,
   heightClass = 'h-[440px]',
   projectName = 'Project Site',
   isDrawingMode = false,
@@ -135,6 +164,11 @@ export const MapComponent: FC<MapComponentProps> = ({
     }
     return center;
   }, [projectCoords, center]);
+
+  // Find nearest Smithsonian CCN Ground-Truth Soil Core to current project centroid
+  const nearestCcn = useMemo(() => {
+    return findNearestCcnStation(recenterTarget);
+  }, [recenterTarget]);
 
   return (
     <div className={`relative z-0 isolate w-full ${heightClass} rounded-2xl overflow-hidden border border-ocean-800 shadow-2xl bg-ocean-950 ${isDrawingMode ? 'drawing-mode-active' : ''}`}>
@@ -361,11 +395,125 @@ export const MapComponent: FC<MapComponentProps> = ({
             </Popup>
           </Polygon>
         )}
+        {/* Smithsonian Coastal Carbon Network (CCN) Ground-Truth Soil Core Markers */}
+        {showCcnLayers &&
+          CCN_CORE_STATIONS.map((station) => (
+            <Marker
+              key={station.coreId}
+              position={[station.latitude, station.longitude]}
+              icon={createCcnCoreIcon(station.soilCarbonStock_tC_ha)}
+            >
+              <Popup className="ccn-core-popup">
+                <div className="p-1.5 text-xs space-y-2 max-w-[270px] text-slate-100">
+                  <div className="flex items-center justify-between border-b border-ocean-800 pb-1.5">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-bold">
+                      {station.coreId}
+                    </span>
+                    <span className="text-amber-400/90 text-[10px] font-semibold">
+                      Smithsonian CCN ({station.studyYear})
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="font-bold text-slate-100 text-xs leading-snug">
+                      {station.stationName}
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      📍 {station.region}
+                    </div>
+                  </div>
+
+                  {/* Scientific Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-1.5 bg-ocean-900/90 p-2 rounded-lg border border-ocean-800 font-mono">
+                    <div>
+                      <div className="text-[9px] text-slate-400 uppercase tracking-tight">Soil Carbon Stock</div>
+                      <div className="text-amber-400 font-bold text-xs">
+                        {station.soilCarbonStock_tC_ha} <span className="text-[9px] font-normal text-slate-300">tC/ha</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-400 uppercase tracking-tight">Sampling Depth</div>
+                      <div className="text-emerald-400 font-bold text-xs">
+                        {station.samplingDepthCm} <span className="text-[9px] font-normal text-slate-300">cm</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-400 uppercase tracking-tight">Mean SOC %</div>
+                      <div className="text-cyan-400 font-bold text-xs">
+                        {station.meanSoilOrganicCarbon_pct}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-400 uppercase tracking-tight">Bulk Density</div>
+                      <div className="text-slate-200 font-bold text-xs">
+                        {station.dryBulkDensity_g_cm3} <span className="text-[9px] font-normal text-slate-400">g/cm³</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-slate-300 leading-tight">
+                    <span className="text-slate-400">Flora:</span> {station.dominantSpecies}
+                  </div>
+
+                  <div className="pt-1.5 border-t border-ocean-800 text-[10px] flex items-center justify-between text-slate-400">
+                    <span className="truncate max-w-[180px]" title={station.institution}>
+                      🏛️ {station.institution}
+                    </span>
+                    <a
+                      href={`https://doi.org/${station.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 underline font-mono text-[10px] ml-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      DOI ↗
+                    </a>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
+        {/* Ground-Truth Geodesic Proximity Line from Project Centroid to Nearest CCN Core */}
+        {showCcnLayers && nearestCcn && nearestCcn.distanceKm <= 180 && (
+          <>
+            <Polyline
+              positions={[
+                recenterTarget,
+                [nearestCcn.station.latitude, nearestCcn.station.longitude],
+              ]}
+              pathOptions={{
+                color: '#f59e0b',
+                weight: 2,
+                dashArray: '5, 8',
+                opacity: 0.85,
+              }}
+              interactive={false}
+            />
+            <Marker
+              position={[
+                (recenterTarget[0] + nearestCcn.station.latitude) / 2,
+                (recenterTarget[1] + nearestCcn.station.longitude) / 2,
+              ]}
+              interactive={false}
+              icon={L.divIcon({
+                className: 'ccn-dist-badge',
+                html: `<div style="transform: translate(-50%, -50%); pointer-events: none;">
+                  <span style="background: rgba(15, 23, 42, 0.94); color: #fbbf24; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 9999px; border: 1px solid rgba(245, 158, 11, 0.7); white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.6); font-family: monospace;">
+                    🔬 ${nearestCcn.distanceKm} km to Ground-Truth Core
+                  </span>
+                </div>`,
+                iconSize: [160, 20],
+                iconAnchor: [80, 10],
+              })}
+            />
+          </>
+        )}
       </MapContainer>
 
       {/* Interactive Map Overlay Instructions & Controls (pointer-events-none so it doesn't block map clicks!) */}
       <div className="absolute bottom-3 left-3 right-3 z-[1000] pointer-events-none bg-ocean-950/85 backdrop-blur-md p-2.5 rounded-xl border border-ocean-800 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-2 shadow-xl">
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-1.5">
             <span className="w-3 h-3 rounded-sm border border-emerald-400 bg-emerald-500/30"></span>
             <span className="text-[11px] text-slate-300">GMW Mangrove Polygon</span>
@@ -374,6 +522,26 @@ export const MapComponent: FC<MapComponentProps> = ({
             <span className="w-3 h-3 rounded-sm border border-cyan-400 bg-cyan-500/30"></span>
             <span className="text-[11px] text-slate-300">Project Boundary</span>
           </div>
+          {onToggleCcnLayers && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCcnLayers();
+              }}
+              className={`pointer-events-auto flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all ${
+                showCcnLayers
+                  ? 'bg-amber-500/20 border-amber-400/80 text-amber-300 font-bold shadow-sm'
+                  : 'bg-ocean-900/80 border-ocean-700 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Toggle Smithsonian Coastal Carbon Network (CCN) Ground-Truth Soil Core Samples"
+            >
+              <span className={`w-2 h-2 rounded-full ${showCcnLayers ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.9)]' : 'bg-slate-500'}`}></span>
+              <span className="text-[10px]">Smithsonian CCN Cores ({CCN_CORE_STATIONS.length})</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-ocean-950 text-amber-300 font-mono">
+                {showCcnLayers ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
         </div>
         <div className="text-[11px] text-cyan-300 font-medium">
           {isDrawingMode 

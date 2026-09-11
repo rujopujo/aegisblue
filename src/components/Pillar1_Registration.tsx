@@ -56,6 +56,7 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
   // Input Mode: 'DRAW' (Interactive click-to-draw polygon) vs 'PRESET' (Preset Indian Mangrove sites & Fraud tests)
   const [inputMode, setInputMode] = useState<'DRAW' | 'PRESET'>('DRAW');
   const [isDrawingMode, setIsDrawingMode] = useState<boolean>(true);
+  const [showCcnLayers, setShowCcnLayers] = useState<boolean>(true);
 
   // Map viewport center & zoom
   const [mapCenter, setMapCenter] = useState<LatLng>([21.88, 88.75]);
@@ -712,6 +713,8 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
               selectedGmwZoneId={boundaryResult?.matchedGmwZone?.id}
               heightClass="h-[560px]"
               projectName={projectName}
+              showCcnLayers={showCcnLayers}
+              onToggleCcnLayers={() => setShowCcnLayers((prev) => !prev)}
               isDrawingMode={isDrawingMode}
               onToggleDrawingMode={() => setIsDrawingMode(!isDrawingMode)}
               onUpdateVertex={handleUpdateVertex}
@@ -720,16 +723,16 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
             />
           </div>
 
-          {/* GMW Legend & Scientific Reference Info */}
+          {/* GMW & CCN Scientific Reference Info */}
           <div className="glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
             <div className="flex items-center space-x-2">
               <Info className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
-                Verified coastal mangrove polygons are rendered in <strong className="text-emerald-400">glowing emerald</strong>. Custom user vertices are numbered in <strong className="text-cyan-400">cyan pins</strong> and are draggable!
+                Mangrove habitats in <strong className="text-emerald-400">glowing emerald</strong>. Smithsonian CCN sediment cores in <strong className="text-amber-400">glowing amber</strong>. Custom vertices in <strong className="text-cyan-400">numbered cyan pins</strong> (draggable).
               </span>
             </div>
             <div className="font-mono text-[11px] text-slate-300">
-              GMW v3.0 Global Mangrove Watch Vector Layers Active
+              GMW v3.0 Vectors & Smithsonian CCN Ground-Truth Layer Active
             </div>
           </div>
         </div>
