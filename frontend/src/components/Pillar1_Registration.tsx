@@ -19,9 +19,9 @@ import {
   Compass,
   Plus
 } from 'lucide-react';
-import { LatLng, BoundaryCheckResult, PresetLocation } from '../types';
+import { LatLng, BoundaryCheckResult, PresetLocation, SamRefineResponse } from '../types';
 import { PRESET_LOCATIONS } from '../data/gmwBoundaries';
-import { apiValidateBoundary } from '../services/apiClient';
+import { apiValidateBoundary, apiRefineCanopySAM } from '../services/apiClient';
 import { 
   calculatePolygonAreaHa, 
   calculatePolygonPerimeterKm, 
@@ -80,6 +80,8 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [boundaryResult, setBoundaryResult] = useState<BoundaryCheckResult | null>(null);
   const [engineSource, setEngineSource] = useState<'FASTAPI' | 'CLIENT_FALLBACK' | null>(null);
+  const [isSnappingSam, setIsSnappingSam] = useState<boolean>(false);
+  const [samRefineData, setSamRefineData] = useState<SamRefineResponse | null>(null);
 
   // Live Area and Perimeter Calculations
   const liveArea = useMemo(() => {
@@ -214,6 +216,29 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
     const computedArea = calculatePolygonAreaHa(currentCoords);
     setAreaHectares(computedArea);
     runGatekeeperCheck();
+  };
+
+  // Meta SAM AI Canopy Refinement Trigger
+  const handleTriggerSamSnap = async () => {
+    if (currentCoords.length < 3) return;
+    setIsSnappingSam(true);
+    try {
+      const res = await apiRefineCanopySAM(currentCoords);
+      setCurrentCoords(res.snappedCoordinates);
+      setAreaHectares(res.areaHectares);
+      setSamRefineData(res);
+      
+      // Automatically re-validate the refined boundary with Gatekeeper
+      setIsChecking(true);
+      const { result, source } = await apiValidateBoundary(res.snappedCoordinates);
+      setBoundaryResult(result);
+      setEngineSource(source);
+      setIsChecking(false);
+    } catch (err) {
+      console.error('[AegisBlue SAM] Error refining canopy boundary:', err);
+    } finally {
+      setIsSnappingSam(false);
+    }
   };
 
   // Run Spatial Gatekeeper Verification
@@ -556,6 +581,42 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
                     </div>
                   </div>
                 )}
+                {/* Meta SAM AI Canopy Snap Action */}
+                <div className="space-y-2 pt-1 border-t border-ocean-850">
+                  <button
+                    onClick={handleTriggerSamSnap}
+                    disabled={isSnappingSam || currentCoords.length < 3}
+                    className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all shadow-md ${
+                      isSnappingSam
+                        ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 animate-pulse'
+                        : samRefineData
+                        ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white border border-emerald-400/60 shadow-emerald-500/25'
+                        : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-400 text-white border border-purple-400/60 shadow-purple-500/25'
+                    } disabled:opacity-40`}
+                    title="Snaps polygon boundary to actual vegetation canopy using Meta's Segment Anything Model"
+                  >
+                    <span>{isSnappingSam ? '⏳' : samRefineData ? '✓' : '🪄'}</span>
+                    <span>{isSnappingSam ? 'Snapping to Canopy...' : samRefineData ? 'Re-Snap with Meta SAM' : 'AI Canopy Snap (Meta SAM)'}</span>
+                  </button>
+
+                  {/* SAM Refinement Info Banner */}
+                  {samRefineData && (
+                    <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-[11px] text-purple-200 space-y-1 animate-fadeIn">
+                      <div className="flex items-center justify-between font-bold text-white text-[11px]">
+                        <span className="flex items-center space-x-1">
+                          <span>🪄</span>
+                          <span>SAM Sub-Pixel Canopy Fit</span>
+                        </span>
+                        <span className="text-emerald-400 font-mono text-[10px] bg-emerald-950/70 border border-emerald-500/40 px-1.5 py-0.5 rounded">
+                          {samRefineData.canopyConfidence}% Match
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-300 leading-tight">
+                        Refined {samRefineData.originalVertices} hand-drawn points → <strong className="text-cyan-300">{samRefineData.refinedVertices} contour vertices</strong>. Water & barren flats excluded.
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Trigger Gatekeeper Button */}
@@ -720,6 +781,9 @@ export const Pillar1_Registration: React.FC<Pillar1RegistrationProps> = ({
               onUpdateVertex={handleUpdateVertex}
               onCompletePolygon={handleCompletePolygon}
               liveAreaHa={liveArea}
+              onTriggerSamSnap={handleTriggerSamSnap}
+              isSnappingSam={isSnappingSam}
+              hasSamSnapped={!!samRefineData}
             />
           </div>
 

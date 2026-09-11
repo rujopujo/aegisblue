@@ -20,6 +20,7 @@ import {
   BoundaryCheckResult 
 } from '../types';
 import { apiAuditSatellite } from '../services/apiClient';
+import { PredictiveInfographics } from './PredictiveInfographics';
 
 interface Pillar2AuditingProps {
   projectData: {
@@ -503,6 +504,16 @@ export const Pillar2_Auditing: React.FC<Pillar2AuditingProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Predictive Infographics & Scientific 3D Partitioning */}
+      {carbonMetrics && (
+        <PredictiveInfographics
+          coordinates={projectData.coordinates[0] || [21.90, 88.75]}
+          areaHectares={projectData.areaHectares}
+          totalCO2Tons={carbonMetrics.projectTotalCO2Tons}
+          locationName={projectData.locationName}
+        />
       )}
     </div>
   );

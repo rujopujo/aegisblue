@@ -205,3 +205,68 @@ class AuditDossierPinResponse(BaseModel):
     totalCredits: float
     dossier: Dict[str, Any]
 
+
+class SamRefineRequest(BaseModel):
+    coordinates: List[List[float]]
+    zoomLevel: Optional[int] = 14
+    tolerance: Optional[float] = 0.00008
+
+
+class SamRefineResponse(BaseModel):
+    status: str = "SUCCESS"
+    originalVertices: int
+    refinedVertices: int
+    canopyConfidence: float
+    areaHectares: float
+    vegetationDensity: float
+    snappedCoordinates: List[List[float]]
+    method: str
+    timestamp: str
+
+
+class CarbonPartitioningData(BaseModel):
+    aboveGroundBiomass_tCO2: float
+    belowGroundBiomass_tCO2: float
+    soilOrganicCarbon_tCO2: float
+    aboveGroundPct: float
+    belowGroundPct: float
+    soilOrganicPct: float
+    depthTiers: List[Dict[str, Any]]
+
+
+class EquivalencyImpactMetrics(BaseModel):
+    carsRemovedPerYear: int
+    passengerFlightsAvoided: int
+    homesCleanPoweredYear: int
+    stormSurgeWaveReductionMeters: float
+
+
+class SpeciesRecommendationItem(BaseModel):
+    id: str
+    commonName: str
+    scientificName: str
+    recommendedRatioPct: int
+    carbonYieldPerHaYear: float
+    salinityTolerancePsu: float
+    waveEnergyAttenuationPct: float
+    ecosystemRole: str
+    nativeSuitabilityScore: float
+
+
+class PredictiveInfographicsRequest(BaseModel):
+    latitude: float
+    longitude: float
+    areaHectares: float
+    totalCO2Tons: float
+
+
+class PredictiveInfographicsResponse(BaseModel):
+    status: str = "SUCCESS"
+    partitioning: CarbonPartitioningData
+    equivalencies: EquivalencyImpactMetrics
+    speciesRecommendations: List[SpeciesRecommendationItem]
+    baselineYieldTonsPerYear: float
+    projected10YearYieldTons: float
+    shannonBiodiversityIndex: float
+    timestamp: str
+

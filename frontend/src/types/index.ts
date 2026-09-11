@@ -185,3 +185,63 @@ export interface CertificateVerificationResult {
   error?: string;
 }
 
+export interface SamRefineResponse {
+  status: string;
+  originalVertices: number;
+  refinedVertices: number;
+  canopyConfidence: number;
+  areaHectares: number;
+  vegetationDensity: number;
+  snappedCoordinates: LatLng[];
+  method: string;
+  timestamp: string;
+}
+
+export interface CarbonDepthTier {
+  depth: string;
+  layerName: string;
+  carbonSharePct: number;
+  tonnesCO2: number;
+  description: string;
+}
+
+export interface CarbonPartitioningData {
+  aboveGroundBiomass_tCO2: number;
+  belowGroundBiomass_tCO2: number;
+  soilOrganicCarbon_tCO2: number;
+  aboveGroundPct: number;
+  belowGroundPct: number;
+  soilOrganicPct: number;
+  depthTiers: CarbonDepthTier[];
+}
+
+export interface EquivalencyImpactMetrics {
+  carsRemovedPerYear: number;
+  passengerFlightsAvoided: number;
+  homesCleanPoweredYear: number;
+  stormSurgeWaveReductionMeters: number;
+}
+
+export interface SpeciesRecommendationItem {
+  id: string;
+  commonName: string;
+  scientificName: string;
+  recommendedRatioPct: number;
+  carbonYieldPerHaYear: number;
+  salinityTolerancePsu: number;
+  waveEnergyAttenuationPct: number;
+  ecosystemRole: string;
+  nativeSuitabilityScore: number;
+}
+
+export interface PredictiveInfographicsResponse {
+  status: string;
+  partitioning: CarbonPartitioningData;
+  equivalencies: EquivalencyImpactMetrics;
+  speciesRecommendations: SpeciesRecommendationItem[];
+  baselineYieldTonsPerYear: number;
+  projected10YearYieldTons: number;
+  shannonBiodiversityIndex: number;
+  timestamp: string;
+}
+

@@ -4,6 +4,24 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from contextlib import asynccontextmanager
 
+# Load environment variables from root and backend .env files
+try:
+    from dotenv import load_dotenv
+    _backend_dir = os.path.dirname(os.path.abspath(__file__))
+    _root_dir = os.path.dirname(_backend_dir)
+    # 1. Root .env
+    _root_env = os.path.join(_root_dir, ".env")
+    if os.path.exists(_root_env):
+        load_dotenv(_root_env)
+    # 2. Backend .env
+    _backend_env = os.path.join(_backend_dir, ".env")
+    if os.path.exists(_backend_env):
+        load_dotenv(_backend_env)
+    # 3. Current working directory .env
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,9 +38,17 @@ from models import (
     RetirementRecord,
     CertificateVerificationResponse,
     AuditDossierPinRequest,
-    AuditDossierPinResponse
+    AuditDossierPinResponse,
+    SamRefineRequest,
+    SamRefineResponse,
+    PredictiveInfographicsRequest,
+    PredictiveInfographicsResponse
 )
-from services.spatial import validate_boundary
+from services.spatial import (
+    validate_boundary,
+    refine_canopy_with_sam,
+    calculate_predictive_infographics
+)
 from services.satellite_mrv import perform_satellite_audit
 from services.ipfs_service import (
     pin_json_to_ipfs,
@@ -71,6 +97,7 @@ def health_check():
         "service": "AegisBlue Satellite MRV & Spatial Engine",
         "version": "1.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ipfs_configured": bool(os.environ.get("PINATA_JWT", "").strip()),
         "capabilities": [
             "Sentinel-2 Multispectral Telemetry",
             "IPCC Tier-3 Wetland Supplement Allometric Biomass Math",
@@ -91,6 +118,44 @@ def validate_project_boundary(request: BoundaryCheckRequest):
             detail="Coordinates list cannot be empty."
         )
     return validate_boundary(request.coordinates)
+
+@app.post("/api/spatial/sam-refine", response_model=SamRefineResponse)
+def run_sam_canopy_refinement(request: SamRefineRequest):
+    """
+    Executes Meta Segment Anything Model (SAM) canopy boundary snapping.
+    Transforms rough hand-drawn coordinate polygons into pixel-precise mangrove canopy contours.
+    """
+    if len(request.coordinates) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least 3 polygon boundary coordinates are required for canopy refinement."
+        )
+    try:
+        return refine_canopy_with_sam(request.coordinates, zoom=request.zoomLevel or 14)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SAM canopy boundary refinement failed: {str(e)}"
+        )
+
+@app.post("/api/ai/predictive-infographics", response_model=PredictiveInfographicsResponse)
+def get_predictive_infographics(request: PredictiveInfographicsRequest):
+    """
+    Calculates scientific 3D carbon partitioning (AGB/BGB/SOC), real-world impact equivalencies,
+    and native species suitability matrices for restoration strategy.
+    """
+    try:
+        return calculate_predictive_infographics(
+            lat=request.latitude,
+            lng=request.longitude,
+            area_ha=request.areaHectares,
+            total_co2=request.totalCO2Tons
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate predictive infographics: {str(e)}"
+        )
 
 @app.post("/api/satellite/audit", response_model=SatelliteAuditResponse)
 def run_satellite_audit(request: SatelliteAuditRequest):
@@ -451,4 +516,6 @@ def pin_audit_dossier(request: AuditDossierPinRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    _root_env = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    _env_file = _root_env if os.path.exists(_root_env) else None
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, env_file=_env_file)
