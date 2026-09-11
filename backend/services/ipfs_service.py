@@ -3,6 +3,20 @@ import logging
 from typing import Dict, Any, Optional
 import requests
 
+# Ensure environment variables are loaded from root or backend directory if present
+try:
+    from dotenv import load_dotenv
+    _srv_dir = os.path.dirname(os.path.abspath(__file__))
+    _root_env = os.path.abspath(os.path.join(_srv_dir, "..", "..", ".env"))
+    if os.path.exists(_root_env):
+        load_dotenv(_root_env)
+    _backend_env = os.path.abspath(os.path.join(_srv_dir, "..", ".env"))
+    if os.path.exists(_backend_env):
+        load_dotenv(_backend_env)
+    load_dotenv()
+except ImportError:
+    pass
+
 logger = logging.getLogger("aegisblue.ipfs")
 
 PINATA_PIN_JSON_URL = "https://api.pinata.cloud/pinning/pinJSONToIPFS"

@@ -4,6 +4,24 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from contextlib import asynccontextmanager
 
+# Load environment variables from root and backend .env files
+try:
+    from dotenv import load_dotenv
+    _backend_dir = os.path.dirname(os.path.abspath(__file__))
+    _root_dir = os.path.dirname(_backend_dir)
+    # 1. Root .env
+    _root_env = os.path.join(_root_dir, ".env")
+    if os.path.exists(_root_env):
+        load_dotenv(_root_env)
+    # 2. Backend .env
+    _backend_env = os.path.join(_backend_dir, ".env")
+    if os.path.exists(_backend_env):
+        load_dotenv(_backend_env)
+    # 3. Current working directory .env
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -71,6 +89,7 @@ def health_check():
         "service": "AegisBlue Satellite MRV & Spatial Engine",
         "version": "1.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ipfs_configured": bool(os.environ.get("PINATA_JWT", "").strip()),
         "capabilities": [
             "Sentinel-2 Multispectral Telemetry",
             "IPCC Tier-3 Wetland Supplement Allometric Biomass Math",
@@ -451,4 +470,6 @@ def pin_audit_dossier(request: AuditDossierPinRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    _root_env = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    _env_file = _root_env if os.path.exists(_root_env) else None
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, env_file=_env_file)
