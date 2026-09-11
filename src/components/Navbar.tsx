@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { POLYGON_AMOY_CONFIG } from '../services/web3Registry';
 import { checkBackendHealth, subscribeToBackendStatus, BackendStatus } from '../services/apiClient';
+import { getDemoWalletState, subscribeDemoWallet, DemoWalletState } from '../services/demoWallet';
 
 interface NavbarProps {
   activeTab: 'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard';
@@ -40,6 +41,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   totalRetiredTons,
 }) => {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({ isOnline: false });
+  const [demoWallet, setDemoWallet] = useState<DemoWalletState>(() => getDemoWalletState());
+
+  useEffect(() => {
+    const unsubDemo = subscribeDemoWallet(setDemoWallet);
+    return () => unsubDemo();
+  }, []);
 
   useEffect(() => {
     checkBackendHealth();
@@ -229,6 +236,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Switch to Amoy</span>
             </button>
           )}
+
+          {/* Enterprise Treasury Dummy Balance Badge ($1,000,000 USD) */}
+          <div
+            title="Enterprise ESG Treasury Dummy Balance ($1,000,000.00 USD Liquid)"
+            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 text-xs font-mono font-bold shadow-sm"
+          >
+            <Coins className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>
+              {demoWallet.usdTreasury.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                maximumFractionDigits: 0,
+              })}
+            </span>
+            <span className="text-[10px] text-emerald-600/70 font-sans uppercase font-bold">Demo</span>
+          </div>
 
           <button
             onClick={onConnectWallet}

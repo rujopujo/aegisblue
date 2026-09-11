@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { RetirementRecord, TokenizedProject } from '../types';
 import { downloadESGCertificatePDF } from '../services/certificateGenerator';
-import { POLYGON_AMOY_CONFIG } from '../services/web3Registry';
+import { POLYGON_AMOY_CONFIG, isRealAmoyTxHash } from '../services/web3Registry';
 
 interface EnterpriseDashboardProps {
   retirements: RetirementRecord[];
@@ -179,15 +179,36 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
 
                       <td className="py-4 pr-4 font-mono text-[10px]">
                         {rec.txHash ? (
-                          <a
-                            href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${rec.txHash}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-cyan-400 hover:underline flex items-center space-x-1"
-                          >
-                            <span>{rec.txHash.slice(0, 14)}...</span>
-                            <ExternalLink className="w-3 h-3 shrink-0" />
-                          </a>
+                          isRealAmoyTxHash(rec.txHash, rec.burnReceiptBlock) ? (
+                            <a
+                              href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${rec.txHash}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-400 hover:underline flex items-center space-x-1"
+                              title={rec.txHash}
+                            >
+                              <span>{rec.txHash.slice(0, 12)}...</span>
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                            </a>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <span className="text-slate-300 font-mono text-[10px]" title={rec.txHash}>
+                                {rec.txHash.slice(0, 10)}...
+                              </span>
+                              <div>
+                                <a
+                                  href={`${POLYGON_AMOY_CONFIG.blockExplorer}/address/${POLYGON_AMOY_CONFIG.contractAddress}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[9px] text-teal-400 hover:underline inline-flex items-center space-x-0.5"
+                                  title="Inspect verified smart contract on PolygonScan"
+                                >
+                                  <span>Demo Ref</span>
+                                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                </a>
+                              </div>
+                            </div>
+                          )
                         ) : (
                           <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 font-mono">
                             Off-Chain Record
@@ -195,7 +216,7 @@ export const EnterpriseDashboard: React.FC<EnterpriseDashboardProps> = ({
                         )}
                         {rec.burnReceiptBlock > 0 && (
                           <div className="text-[9px] text-slate-400 mt-0.5">
-                            Block #{rec.burnReceiptBlock}
+                            Block #{rec.burnReceiptBlock} {isRealAmoyTxHash(rec.txHash, rec.burnReceiptBlock) ? '' : '(Demo)'}
                           </div>
                         )}
                       </td>

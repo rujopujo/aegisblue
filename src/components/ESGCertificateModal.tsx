@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Download, 
@@ -13,7 +13,7 @@ import {
 import { RetirementRecord, TokenizedProject } from '../types';
 import { downloadESGCertificatePDF } from '../services/certificateGenerator';
 import { generateVerificationUrl, generateQRCodeDataUrl } from '../services/qrService';
-import { POLYGON_AMOY_CONFIG } from '../services/web3Registry';
+import { POLYGON_AMOY_CONFIG, isRealAmoyTxHash } from '../services/web3Registry';
 
 interface ESGCertificateModalProps {
   record: RetirementRecord | null;
@@ -196,15 +196,35 @@ export const ESGCertificateModal: React.FC<ESGCertificateModalProps> = ({
               <div>
                 <span className="text-slate-400">Transaction Hash:</span>
                 {record.txHash ? (
-                  <a
-                    href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${record.txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-cyan-400 hover:underline flex items-center space-x-1 truncate"
-                  >
-                    <span className="truncate">{record.txHash}</span>
-                    <ExternalLink className="w-3 h-3 shrink-0" />
-                  </a>
+                  isRealAmoyTxHash(record.txHash, record.burnReceiptBlock) ? (
+                    <a
+                      href={`${POLYGON_AMOY_CONFIG.blockExplorer}/tx/${record.txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-cyan-400 hover:underline flex items-center space-x-1 truncate"
+                    >
+                      <span className="truncate">{record.txHash}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                    </a>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-1.5 font-mono text-[10px] text-cyan-300">
+                        <span className="truncate">{record.txHash.slice(0, 14)}...{record.txHash.slice(-6)}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-500/20 text-purple-300 font-sans border border-purple-500/30">
+                          Demo Ref
+                        </span>
+                      </div>
+                      <a
+                        href={`${POLYGON_AMOY_CONFIG.blockExplorer}/address/${POLYGON_AMOY_CONFIG.contractAddress}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-teal-300 hover:underline flex items-center space-x-1"
+                      >
+                        <span>Verify Smart Contract on PolygonScan</span>
+                        <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                      </a>
+                    </div>
+                  )
                 ) : (
                   <div className="text-slate-500">Off-Chain Record (Simulation)</div>
                 )}
@@ -212,7 +232,11 @@ export const ESGCertificateModal: React.FC<ESGCertificateModalProps> = ({
               <div>
                 <span className="text-slate-400">Polygon Block Number:</span>
                 <div className="text-slate-200">
-                  {record.burnReceiptBlock > 0 ? `#${record.burnReceiptBlock.toLocaleString()}` : 'N/A'}
+                  {record.burnReceiptBlock > 0
+                    ? isRealAmoyTxHash(record.txHash, record.burnReceiptBlock)
+                      ? `#${record.burnReceiptBlock.toLocaleString()}`
+                      : `#${record.burnReceiptBlock.toLocaleString()} (Simulated)`
+                    : 'N/A'}
                 </div>
               </div>
               {record.ipfsCertificateCid && (

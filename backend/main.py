@@ -38,9 +38,17 @@ from models import (
     RetirementRecord,
     CertificateVerificationResponse,
     AuditDossierPinRequest,
-    AuditDossierPinResponse
+    AuditDossierPinResponse,
+    SamRefineRequest,
+    SamRefineResponse,
+    PredictiveInfographicsRequest,
+    PredictiveInfographicsResponse
 )
-from services.spatial import validate_boundary
+from services.spatial import (
+    validate_boundary,
+    refine_canopy_with_sam,
+    calculate_predictive_infographics
+)
 from services.satellite_mrv import perform_satellite_audit
 from services.ipfs_service import (
     pin_json_to_ipfs,
@@ -110,6 +118,44 @@ def validate_project_boundary(request: BoundaryCheckRequest):
             detail="Coordinates list cannot be empty."
         )
     return validate_boundary(request.coordinates)
+
+@app.post("/api/spatial/sam-refine", response_model=SamRefineResponse)
+def run_sam_canopy_refinement(request: SamRefineRequest):
+    """
+    Executes Meta Segment Anything Model (SAM) canopy boundary snapping.
+    Transforms rough hand-drawn coordinate polygons into pixel-precise mangrove canopy contours.
+    """
+    if len(request.coordinates) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least 3 polygon boundary coordinates are required for canopy refinement."
+        )
+    try:
+        return refine_canopy_with_sam(request.coordinates, zoom=request.zoomLevel or 14)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SAM canopy boundary refinement failed: {str(e)}"
+        )
+
+@app.post("/api/ai/predictive-infographics", response_model=PredictiveInfographicsResponse)
+def get_predictive_infographics(request: PredictiveInfographicsRequest):
+    """
+    Calculates scientific 3D carbon partitioning (AGB/BGB/SOC), real-world impact equivalencies,
+    and native species suitability matrices for restoration strategy.
+    """
+    try:
+        return calculate_predictive_infographics(
+            lat=request.latitude,
+            lng=request.longitude,
+            area_ha=request.areaHectares,
+            total_co2=request.totalCO2Tons
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate predictive infographics: {str(e)}"
+        )
 
 @app.post("/api/satellite/audit", response_model=SatelliteAuditResponse)
 def run_satellite_audit(request: SatelliteAuditRequest):

@@ -94,6 +94,10 @@ interface MapComponentProps {
   onUpdateVertex?: (index: number, newCoord: LatLng) => void;
   onCompletePolygon?: () => void;
   liveAreaHa?: number;
+  // Meta SAM AI Canopy Refinement Props
+  onTriggerSamSnap?: () => void;
+  isSnappingSam?: boolean;
+  hasSamSnapped?: boolean;
 }
 
 export const MapComponent: FC<MapComponentProps> = ({
@@ -111,6 +115,9 @@ export const MapComponent: FC<MapComponentProps> = ({
   onUpdateVertex,
   onCompletePolygon,
   liveAreaHa,
+  onTriggerSamSnap,
+  isSnappingSam = false,
+  hasSamSnapped = false,
 }) => {
   const markerIcon = useMemo(() => {
     if (isValidBoundary === true) {
@@ -138,9 +145,34 @@ export const MapComponent: FC<MapComponentProps> = ({
 
   return (
     <div className={`relative z-0 isolate w-full ${heightClass} rounded-2xl overflow-hidden border border-ocean-800 shadow-2xl bg-ocean-950 ${isDrawingMode ? 'drawing-mode-active' : ''}`}>
-      {/* Floating Drawing Switch Overlay in Top-Right Corner of Map Canvas */}
-      {onToggleDrawingMode && (
-        <div className="absolute top-3 right-3 z-[1000] pointer-events-auto">
+      {/* Floating Action Controls Overlay in Top-Right Corner of Map Canvas */}
+      <div className="absolute top-3 right-3 z-[1000] pointer-events-auto flex items-center space-x-2">
+        {/* Meta SAM AI Canopy Snap Action Button */}
+        {onTriggerSamSnap && projectCoords.length >= 3 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTriggerSamSnap();
+            }}
+            disabled={isSnappingSam}
+            className={`px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center space-x-1.5 transition-all duration-200 shadow-2xl backdrop-blur-md border ${
+              isSnappingSam
+                ? 'bg-purple-950/90 text-purple-300 border-purple-500/50 animate-pulse'
+                : hasSamSnapped
+                ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-ocean-950 border-emerald-300 shadow-emerald-500/30'
+                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-400 text-white border border-purple-400/80 hover:scale-105 shadow-purple-500/30'
+            }`}
+            title="Use Meta Segment Anything Model (SAM) to snap this boundary directly to the mangrove canopy in satellite imagery"
+          >
+            <span>{isSnappingSam ? '⏳' : hasSamSnapped ? '✓' : '🪄'}</span>
+            <span className="tracking-wider uppercase text-[10px]">
+              {isSnappingSam ? 'AI Snapping...' : hasSamSnapped ? 'SAM Canopy Snapped' : 'AI Canopy Snap (SAM)'}
+            </span>
+          </button>
+        )}
+
+        {/* Drawing Mode Toggle Switch */}
+        {onToggleDrawingMode && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -169,8 +201,8 @@ export const MapComponent: FC<MapComponentProps> = ({
               }`} />
             </div>
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Map Header Status Tag */}
       <div className="absolute top-3 left-12 sm:left-14 z-[1000] flex flex-wrap gap-2 pointer-events-none max-w-[calc(100%-180px)]">
