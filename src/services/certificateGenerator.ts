@@ -1,248 +1,338 @@
-﻿import { jsPDF } from 'jspdf';
-import { RetirementRecord, TokenizedProject } from '../types';
-import { generateVerificationUrl, generateQRCodeDataUrl } from './qrService';
-import { POLYGON_AMOY_CONFIG } from './web3Registry';
+import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
+import { ESGCertificateData } from '../types/marketplace';
 
 /**
- * Generates and downloads a high-resolution, institutional-grade ESG Blue Carbon Retirement Certificate.
- * Embeds on-chain Polygon Amoy metadata, verified block proof, and an interactive verification QR code.
+ * Member 4 Deliverable: Verified ESG PDF Certificate Generator
+ * Crafted to replicate the classic golden ornamental award certificate reference:
+ * - Ivory / warm cream parchment background
+ * - Double ornate gold guilloche filigree border with corner flourishes
+ * - Arched golden ribbon banner at top
+ * - "CERTIFICATE OF RECOGNITION / CARBON OFFSET RETIREMENT"
+ * - Calligraphic recipient typography with decorative flourishes
+ * - Embossed golden circular security seal
+ * - Formal Date and Director signature lines
+ * - Serial number box [ No. ESG-2026-BC-XXXXXX ]
+ * - Scannable on-chain Polygon Amoy Proof-of-Burn QR Code
  */
-export async function downloadESGCertificatePDF(
-  record: RetirementRecord,
-  _project?: TokenizedProject
-): Promise<void> {
+export async function generateCertificatePDF(data: ESGCertificateData): Promise<jsPDF> {
+  // A4 Landscape: 297mm x 210mm
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
-    format: 'a4',
+    format: 'a4'
   });
 
-  // Page Dimensions (A4 Landscape: 297mm x 210mm)
-  const width = doc.internal.pageSize.getWidth();
-  const height = doc.internal.pageSize.getHeight();
+  const pageWidth = 297;
+  const pageHeight = 210;
 
-  // Background luxury deep ocean palette
-  doc.setFillColor(5, 11, 28); // #050b1c
-  doc.rect(0, 0, width, height, 'F');
-
-  // Decorative Outer Borders
-  doc.setDrawColor(16, 185, 129); // Emerald 500
-  doc.setLineWidth(1.2);
-  doc.roundedRect(8, 8, width - 16, height - 16, 4, 4, 'S');
-
-  doc.setDrawColor(6, 182, 212); // Cyan 500
-  doc.setLineWidth(0.4);
-  doc.roundedRect(10.5, 10.5, width - 21, height - 21, 3, 3, 'S');
-
-  // Header Title
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(52, 211, 153); // Emerald 400
-  doc.setFontSize(10);
-  doc.text('AEGISBLUE VERIFIED BLUE CARBON REGISTRY', width / 2, 21, { align: 'center' });
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.text('ESG / BLUE CARBON RETIREMENT CERTIFICATE', width / 2, 31, { align: 'center' });
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184); // Slate 400
-  doc.setFontSize(9);
-  doc.text('Issued under Global Mangrove Watch (GMW v3.0) & Sentinel-2 Automated MRV Protocol', width / 2, 37, { align: 'center' });
-
-  // Divider line
-  doc.setDrawColor(30, 58, 138); // Ocean 800
-  doc.setLineWidth(0.4);
-  doc.line(25, 42, width - 25, 42);
-
-  // Beneficiary Statement
-  doc.setFontSize(11);
-  doc.setTextColor(203, 213, 225); // Slate 300
-  doc.text('This certifies that an irrevocable on-chain carbon retirement has been permanently executed for:', width / 2, 51, { align: 'center' });
-
-  // Company Name
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(34, 211, 238); // Cyan 400
-  doc.text(record.companyName.toUpperCase(), width / 2, 62, { align: 'center' });
-
-  // Tons Retired Prominent Badge Box
-  const badgeWidth = 150;
-  const badgeX = width / 2 - badgeWidth / 2;
-  doc.setFillColor(11, 23, 57);
-  doc.roundedRect(badgeX, 68, badgeWidth, 18, 3, 3, 'F');
-  doc.setDrawColor(16, 185, 129);
-  doc.roundedRect(badgeX, 68, badgeWidth, 18, 3, 3, 'S');
-
-  doc.setFontSize(14);
-  doc.setTextColor(16, 185, 129);
-  doc.text(
-    `${record.tonsRetired.toLocaleString()} METRIC TONS OF CO₂ EQUIVALENT PERMANENTLY RETIRED`,
-    width / 2,
-    80,
-    { align: 'center' }
-  );
-
-  // Details Grid Configuration
-  const leftColX = 20;
-  const midColX = 118;
-  const qrColX = 238;
-  let y = 98;
-
-  // Left Column: Project & Corporate Identification
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(226, 232, 240);
-  doc.text('Retirement & Project Details:', leftColX, y);
-  y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Project Origin: ', leftColX, y);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`${record.projectName}`, leftColX + 28, y);
-  y += 5.5;
-
-  doc.setTextColor(148, 163, 184);
-  doc.text('Project ID: ', leftColX, y);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`${record.projectId}`, leftColX + 28, y);
-  y += 5.5;
-
-  doc.setTextColor(148, 163, 184);
-  doc.text('Certificate ID: ', leftColX, y);
-  doc.setFont('courier', 'bold');
-  doc.setTextColor(34, 211, 238);
-  doc.text(`${record.certificateId}`, leftColX + 28, y);
-  y += 5.5;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Retirement Purpose: ', leftColX, y);
-  doc.setTextColor(255, 255, 255);
-  const purposeText = record.purpose.length > 42 ? `${record.purpose.slice(0, 40)}...` : record.purpose;
-  doc.text(purposeText, leftColX + 32, y);
-  y += 5.5;
-
-  doc.setTextColor(148, 163, 184);
-  doc.text('Beneficiary Wallet: ', leftColX, y);
-  doc.setFont('courier', 'normal');
-  doc.setTextColor(147, 197, 253);
-  doc.text(`${record.companyWallet}`, leftColX + 32, y);
-  y += 5.5;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Date of Retirement: ', leftColX, y);
-  doc.setTextColor(255, 255, 255);
-  doc.text(new Date(record.retiredAt).toUTCString(), leftColX + 32, y);
-
-  // Middle Column: Cryptographic On-Chain Verification
-  y = 98;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(226, 232, 240);
-  doc.text('On-Chain Cryptographic Proofs:', midColX, y);
-  y += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Blockchain Network: ', midColX, y);
-  doc.setTextColor(52, 211, 153);
-  doc.text(`${record.network || 'Polygon Amoy'} (POS Chain ID 80002)`, midColX + 34, y);
-  y += 5.5;
-
-  doc.setTextColor(148, 163, 184);
-  doc.text('Contract Address: ', midColX, y);
-  doc.setFont('courier', 'normal');
-  doc.setTextColor(147, 197, 253);
-  const contractAddr = record.contractAddress || POLYGON_AMOY_CONFIG.contractAddress;
-  doc.text(contractAddr, midColX + 34, y);
-  y += 5.5;
-
-  if (record.tokenId) {
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text('Token ID (ERC-1155): ', midColX, y);
-    doc.setFont('courier', 'normal');
-    doc.setTextColor(147, 197, 253);
-    const displayToken = record.tokenId.length > 28
-      ? `${record.tokenId.slice(0, 14)}...${record.tokenId.slice(-10)}`
-      : record.tokenId;
-    doc.text(displayToken, midColX + 34, y);
-    y += 5.5;
-  }
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Transaction Hash: ', midColX, y);
-  doc.setFont('courier', 'normal');
-  doc.setTextColor(147, 197, 253);
-  const displayTx = record.txHash
-    ? (record.txHash.length > 28 ? `${record.txHash.slice(0, 16)}...${record.txHash.slice(-10)}` : record.txHash)
-    : 'Off-Chain Record (Simulated)';
-  doc.text(displayTx, midColX + 34, y);
-  y += 5.5;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text('Polygon Block Number: ', midColX, y);
-  doc.setTextColor(255, 255, 255);
-  doc.text(record.burnReceiptBlock > 0 ? `#${record.burnReceiptBlock.toLocaleString()}` : 'N/A', midColX + 36, y);
-  y += 5.5;
-
-  if (record.ipfsCertificateCid && record.ipfsCertificateCid.trim()) {
-    doc.setTextColor(148, 163, 184);
-    doc.text('IPFS Audit CID: ', midColX, y);
-    doc.setFont('courier', 'normal');
-    doc.setTextColor(147, 197, 253);
-    doc.text(`${record.ipfsCertificateCid.slice(0, 24)}...`, midColX + 34, y);
-    y += 5.5;
-  }
-
-  // Right Column: Public Verification QR Code
-  const verifyUrl = generateVerificationUrl(record.certificateId);
+  // Generate QR Code with verification link
+  const verifyLink = `https://amoy.polygonscan.com/tx/${data.polygonBurnTxHash}`;
+  let qrDataUrl = '';
   try {
-    const qrDataUrl = await generateQRCodeDataUrl(verifyUrl);
-
-    // QR Card Background Container
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(qrColX, 98, 42, 42, 2.5, 2.5, 'F');
-    doc.setDrawColor(16, 185, 129);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(qrColX, 98, 42, 42, 2.5, 2.5, 'S');
-
-    // Embed QR image (centered in container)
-    doc.addImage(qrDataUrl, 'PNG', qrColX + 2, 100, 38, 38);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(52, 211, 153);
-    doc.text('Scan to Verify On-Chain', qrColX + 21, 146, { align: 'center' });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text('/verify/' + record.certificateId.slice(0, 16), qrColX + 21, 150, { align: 'center' });
-  } catch (qrErr) {
-    console.warn('[AegisBlue] Could not render QR in PDF certificate:', qrErr);
+    qrDataUrl = await QRCode.toDataURL(verifyLink, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: 250,
+      color: {
+        dark: '#4a370b',
+        light: '#ffffff'
+      }
+    });
+  } catch (err) {
+    console.error('Failed to generate QR Code', err);
   }
 
-  // Bottom Formal Compliance Notice
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    'This certificate represents an irrevocable on-chain retirement and permanent burn of ERC-1155 blue carbon credits on Polygon Amoy.',
-    width / 2,
-    height - 18,
-    { align: 'center' }
-  );
-  doc.text(
-    'Credits are permanently extinguished from circulation and cannot be resold, re-transferred, or double-counted for emissions disclosure.',
-    width / 2,
-    height - 14,
-    { align: 'center' }
-  );
+  // 1. Warm Ivory / Cream Parchment Background Fill
+  doc.setFillColor(250, 246, 236); // Ivory Parchment
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  doc.save(`AegisBlue_ESG_Retirement_${record.certificateId}.pdf`);
+  // Subtle inner parchment tone
+  doc.setFillColor(253, 250, 243);
+  doc.rect(8, 8, pageWidth - 16, pageHeight - 16, 'F');
+
+  // 2. Outer Ornate Golden Borders (Antique Gold #C5A059 & Bronze #997328)
+  // Outer primary gold line
+  doc.setDrawColor(197, 160, 89);
+  doc.setLineWidth(2.2);
+  doc.rect(12, 12, pageWidth - 24, pageHeight - 24, 'S');
+
+  // Inner thin bronze line
+  doc.setDrawColor(153, 115, 40);
+  doc.setLineWidth(0.6);
+  doc.rect(14.5, 14.5, pageWidth - 29, pageHeight - 29, 'S');
+
+  // Secondary inner hairline
+  doc.setDrawColor(218, 185, 118);
+  doc.setLineWidth(0.3);
+  doc.rect(16.5, 16.5, pageWidth - 33, pageHeight - 33, 'S');
+
+  // Guilloche corner flourishes
+  const drawFlourishCorner = (cx: number, cy: number, quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    doc.setDrawColor(180, 138, 48);
+    doc.setLineWidth(0.7);
+
+    const signX = (quadrant === 'TR' || quadrant === 'BR') ? -1 : 1;
+    const signY = (quadrant === 'BL' || quadrant === 'BR') ? -1 : 1;
+
+    // Corner decorative arcs
+    doc.circle(cx + (signX * 4), cy + (signY * 4), 2.5, 'S');
+    doc.setFillColor(197, 160, 89);
+    doc.circle(cx + (signX * 4), cy + (signY * 4), 1.2, 'F');
+
+    // L-shaped flourish brackets
+    doc.line(cx, cy, cx + (signX * 12), cy);
+    doc.line(cx, cy, cx, cy + (signY * 12));
+
+    doc.line(cx + (signX * 2), cy + (signY * 6), cx + (signX * 6), cy + (signY * 2));
+    doc.line(cx + (signX * 3), cy + (signY * 9), cx + (signX * 9), cy + (signY * 3));
+  };
+
+  drawFlourishCorner(17, 17, 'TL');
+  drawFlourishCorner(pageWidth - 17, 17, 'TR');
+  drawFlourishCorner(17, pageHeight - 17, 'BL');
+  drawFlourishCorner(pageWidth - 17, pageHeight - 17, 'BR');
+
+  // Side geometric guilloche ticks
+  doc.setDrawColor(206, 172, 102);
+  doc.setLineWidth(0.3);
+  for (let y = 30; y <= pageHeight - 30; y += 8) {
+    doc.line(13, y, 16, y - 2);
+    doc.line(13, y, 16, y + 2);
+    doc.line(pageWidth - 13, y, pageWidth - 16, y - 2);
+    doc.line(pageWidth - 13, y, pageWidth - 16, y + 2);
+  }
+
+  // 3. Top Golden Ribbon Banner (Company / Standard Name)
+  const ribbonWidth = 110;
+  const ribbonHeight = 12;
+  const ribbonX = (pageWidth - ribbonWidth) / 2;
+  const ribbonY = 19;
+
+  // Ribbon folded tails
+  doc.setFillColor(153, 115, 40); // darker gold shade for fold depth
+  doc.triangle(ribbonX - 8, ribbonY + 3, ribbonX + 2, ribbonY - 1, ribbonX + 2, ribbonY + ribbonHeight + 1, 'F');
+  doc.triangle(ribbonX + ribbonWidth + 8, ribbonY + 3, ribbonX + ribbonWidth - 2, ribbonY - 1, ribbonX + ribbonWidth - 2, ribbonY + ribbonHeight + 1, 'F');
+
+  // Main Ribbon body
+  doc.setFillColor(205, 162, 79); // warm antique gold
+  doc.roundedRect(ribbonX, ribbonY, ribbonWidth, ribbonHeight, 2, 2, 'F');
+  doc.setDrawColor(160, 120, 45);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(ribbonX, ribbonY, ribbonWidth, ribbonHeight, 2, 2, 'S');
+
+  // Ribbon banner text
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('NATIONAL BLUE CARBON REGISTRY', pageWidth / 2, ribbonY + 8, { align: 'center' });
+
+  // 4. Main Certificate Title (Antique Gold / Bronze Serif)
+  doc.setFont('times', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(176, 134, 52); // Rich Certificate Gold
+  doc.text('CERTIFICATE OF RECOGNITION', pageWidth / 2, 42, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.setTextColor(120, 90, 35);
+  doc.text('VERIFIED CARBON OFFSET RETIREMENT & ESG COMPLIANCE', pageWidth / 2, 48, { align: 'center' });
+
+  // 5. Decorative Ornamental Divider: ΓöÇΓöÇΓöÇ ΓÇóΓÇóΓÇó ΓöÇΓöÇΓöÇ
+  doc.setDrawColor(197, 160, 89);
+  doc.setLineWidth(0.6);
+  doc.line(pageWidth / 2 - 50, 52, pageWidth / 2 - 10, 52);
+  doc.line(pageWidth / 2 + 10, 52, pageWidth / 2 + 50, 52);
+
+  doc.setFillColor(197, 160, 89);
+  doc.circle(pageWidth / 2 - 4, 52, 1.2, 'F');
+  doc.circle(pageWidth / 2, 52, 1.8, 'F');
+  doc.circle(pageWidth / 2 + 4, 52, 1.2, 'F');
+
+  // 6. Presentation Lead
+  doc.setFont('times', 'normal');
+  doc.setFontSize(10.5);
+  doc.setTextColor(80, 70, 55);
+  doc.text('THIS CERTIFICATE IS PROUDLY PRESENTED TO', pageWidth / 2, 60, { align: 'center' });
+
+  // 7. Recipient Company Name (Prominent Calligraphy Presentation)
+  doc.setFont('times', 'bolditalic');
+  doc.setFontSize(26);
+  doc.setTextColor(35, 30, 20); // Deep Espresso Ink
+  doc.text(data.companyName, pageWidth / 2, 72, { align: 'center' });
+
+  // Calligraphic underline with center diamond
+  const nameWidth = doc.getTextWidth(data.companyName);
+  const lineStart = pageWidth / 2 - (nameWidth / 2) - 8;
+  const lineEnd = pageWidth / 2 + (nameWidth / 2) + 8;
+  doc.setDrawColor(180, 138, 48);
+  doc.setLineWidth(0.5);
+  doc.line(lineStart, 76, pageWidth / 2 - 4, 76);
+  doc.line(pageWidth / 2 + 4, 76, lineEnd, 76);
+  doc.setFillColor(180, 138, 48);
+  doc.circle(pageWidth / 2, 76, 1.2, 'F');
+
+  // 8. Formal Retirement Statement (Italicized Serif)
+  doc.setFont('times', 'italic');
+  doc.setFontSize(10);
+  doc.setTextColor(60, 50, 40);
+  const retiredTonsFormatted = new Intl.NumberFormat().format(data.tonsRetired);
+  const statement1 = `In honor of the verified and permanent retirement of ${retiredTonsFormatted} Metric Tonnes of CO2e`;
+  const statement2 = `from global atmospheric circulation, certified under the National Blue Carbon Standard.`;
+  const statement3 = `Originating from ${data.projectName} (${data.ecosystemType} ΓÇó ${data.projectRegion}),`;
+  const statement4 = `audited via Sentinel-2 Multispectral Satellite MRV and immutably burned on the Polygon Ledger.`;
+
+  doc.text(statement1, pageWidth / 2, 85, { align: 'center' });
+  doc.text(statement2, pageWidth / 2, 90, { align: 'center' });
+  doc.text(statement3, pageWidth / 2, 95, { align: 'center' });
+  doc.text(statement4, pageWidth / 2, 100, { align: 'center' });
+
+  // 9. Mid-Certificate Metric Highlight Box
+  doc.setFillColor(254, 252, 242);
+  doc.setDrawColor(218, 185, 118);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(pageWidth / 2 - 75, 106, 150, 15, 2, 2, 'FD');
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(140, 100, 30);
+  doc.text(`${retiredTonsFormatted} METRIC TONNES OF CO2e PERMANENTLY RETIRED`, pageWidth / 2, 114, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(110, 95, 75);
+  doc.text(`Estimated Climate Impact: ~${data.environmentalImpact.treesEquivalent.toLocaleString()} Trees Conserved  ΓÇó  ~${data.environmentalImpact.flightMilesOffset.toLocaleString()} Flight Hours Offset`, pageWidth / 2, 118.5, { align: 'center' });
+
+  // 10. Polygon Proof Box (Left-Center)
+  doc.setFillColor(252, 249, 240);
+  doc.setDrawColor(220, 195, 140);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(26, 126, 140, 26, 1.5, 1.5, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(130, 95, 30);
+  doc.text('CRYPTOGRAPHIC ON-CHAIN PROOF-OF-BURN:', 30, 132);
+
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(70, 60, 50);
+  doc.text(`Polygon Burn Tx: ${data.polygonBurnTxHash}`, 30, 137);
+  doc.text(`IPFS MRV Dossier: ${data.ipfsDossierCid}`, 30, 142);
+  doc.text(`Token ID: #${data.polygonTokenId}  ΓÇó  Network: Polygon Amoy Testnet (Chain ID 80002)`, 30, 147);
+
+  // 11. Scannable QR Code (Right-Center)
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', pageWidth - 66, 124, 38, 38);
+    doc.setFont('times', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(140, 100, 30);
+    doc.text('SCAN TO VERIFY LEDGER', pageWidth - 47, 165, { align: 'center' });
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(100, 85, 70);
+    doc.text(data.certificateId, pageWidth - 47, 169, { align: 'center' });
+  }
+
+  // 12. Bottom Golden Embossed Security Seal (Center)
+  const sealX = pageWidth / 2;
+  const sealY = 146;
+
+  // Outer scalloped ring
+  doc.setDrawColor(197, 160, 89);
+  doc.setFillColor(253, 248, 230);
+  doc.circle(sealX, sealY, 13, 'FD');
+
+  // Inner ring
+  doc.setDrawColor(160, 120, 45);
+  doc.setLineWidth(0.5);
+  doc.circle(sealX, sealY, 11, 'S');
+
+  // Beaded ring
+  doc.circle(sealX, sealY, 9.5, 'S');
+
+  // Seal monogram / emblem
+  doc.setFont('times', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(153, 115, 40);
+  doc.text('VERIFIED', sealX, sealY - 2.5, { align: 'center' });
+  doc.text('BLUE CARBON', sealX, sealY + 0.8, { align: 'center' });
+  doc.setFontSize(5.5);
+  doc.text('SIH 2026 AUDITED', sealX, sealY + 3.8, { align: 'center' });
+
+  // 13. Bottom Serial Number Box [ No. 000000 ] matching reference certificate image
+  const boxWidth = 54;
+  const boxHeight = 7.5;
+  const boxX = (pageWidth - boxWidth) / 2;
+  const boxY = 175;
+
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(180, 138, 48);
+  doc.setLineWidth(0.5);
+  doc.rect(boxX, boxY, boxWidth, boxHeight, 'FD');
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 80, 50);
+  doc.text('No.', boxX + 8, boxY + 5.2);
+
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 25, 15);
+  doc.text(data.certificateId.replace('ESG-2026-BC-', ''), boxX + 28, boxY + 5.2, { align: 'center' });
+
+  // 14. Bottom Left: Date Line (matching reference image)
+  const dateLineX = 35;
+  const dateLineY = 176;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(30, 25, 15);
+  const formattedDate = data.issuanceDate.split(' ')[0].replace(/-/g, '.');
+  doc.text(formattedDate, dateLineX + 20, dateLineY - 2, { align: 'center' });
+
+  doc.setDrawColor(50, 45, 35);
+  doc.setLineWidth(0.4);
+  doc.line(dateLineX, dateLineY, dateLineX + 40, dateLineY);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80, 70, 55);
+  doc.text('Date', dateLineX + 20, dateLineY + 5, { align: 'center' });
+
+  // 15. Bottom Right: Director Signature Line (matching reference image)
+  const dirLineX = pageWidth - 75;
+  const dirLineY = 176;
+  doc.setFont('times', 'italic');
+  doc.setFontSize(12);
+  doc.setTextColor(30, 25, 15);
+  doc.text('Dr. Aris Thorne', dirLineX + 20, dirLineY - 2, { align: 'center' });
+
+  doc.setDrawColor(50, 45, 35);
+  doc.setLineWidth(0.4);
+  doc.line(dirLineX, dirLineY, dirLineX + 40, dirLineY);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80, 70, 55);
+  doc.text('Director / Lead Auditor', dirLineX + 20, dirLineY + 5, { align: 'center' });
+
+  return doc;
+}
+
+/**
+ * Downloads the generated ESG PDF Certificate directly to user's local disk
+ */
+export async function downloadESGCertificate(data: ESGCertificateData): Promise<void> {
+  const doc = await generateCertificatePDF(data);
+  const cleanFilename = `${data.certificateId}_${data.companyName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+  doc.save(cleanFilename);
+}
+
+export const downloadESGCertificatePDF = downloadESGCertificate;
+
+/**
+ * Returns a Data URL for in-app modal preview
+ */
+export async function getCertificateDataUri(data: ESGCertificateData): Promise<string> {
+  const doc = await generateCertificatePDF(data);
+  return doc.output('datauristring');
 }
