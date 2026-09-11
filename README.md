@@ -1,105 +1,97 @@
-# 🌊 AegisBlue — Decentralized Blue Carbon MRV & Tokenization Engine
-> **Smart India Hackathon (SIH 2026)** &bull; *Team Carbon*
+# 🌊 AegisBlue • Pillar 4: Marketplace, ESG Dashboard & PDF Certificate Engine
 
-[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Polygon](https://img.shields.io/badge/Polygon-Amoy_Testnet-8247E5?logo=polygon&logoColor=white)](https://polygon.technology/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+> **Decentralized Blue Carbon Registry, Enterprise ESG Portals & Verified Retiring**  
+> **Developer:** Sarthak Bongane  
+> **Branch:** `feature/pillar-4-marketplace-esg`
 
 ---
 
-## 💡 Overview
+## ≡ƒôî Architecture & Overview
 
-**AegisBlue** is an end-to-end Blue Carbon Digital MRV (Measurement, Reporting & Verification) and Carbon Credit Tokenization Platform. It replaces slow, error-prone human auditing of coastal mangrove ecosystems with automated satellite telemetry, ground-truth scientific soil/biomass models, on-chain minting, and corporate ESG retirement certificates.
-
----
-
-## 🏛️ The 4 Pillars Architecture
-
-```
-[ Pillar 1: Map & GIS ]        NGO draws coastal project boundary over mangrove forest
-          │                    (Checked against Smithsonian CCN coastal core dataset)
-          ▼
-[ Pillar 2: Satellite MRV ]    Sentinel-2 satellite scans canopy health (NDVI) & computes
-          │                    Above-Ground Biomass, Soil Carbon, and Total CO2 tons
-          ▼
-[ Pillar 3: Web3 Tokens ]      Stores audit dossier on IPFS & mints ERC-1155 Carbon Tokens
-          │                    on the Polygon Amoy blockchain
-          ▼
-[ Pillar 4: Marketplace ]      Corporates purchase & permanently burn credits with verified
-                               ESG certificates (jsPDF + QR verification code)
-```
+AegisBlue is an end-to-end Blue Carbon MRV and Tokenization platform. **Pillar 4** provides the commercialization, corporate retirement, and cryptographic compliance layer that links:
+- **Member 2's Satellite MRV Telemetry**: ESA Sentinel-2 NDVI canopy density indices and Smithsonian CCN soil organic carbon depth data.
+- **Member 3's Web3 Tokenization**: Polygon Amoy smart contract addresses, token IDs, and IPFS audit dossier CIDs.
+- **Corporate Buyers**: Scope 1 & 2 industrial compliance offsets, instant on-chain token burns, and verified ESG Certificates of Recognition.
 
 ---
 
-## 📁 Repository Structure
+## Γ£¿ Features Implemented
 
-All directories are organized in lowercase:
+### 1. Credit Marketplace Storefront (`src/components/Pillar4_Marketplace.tsx`)
+- Card-based interface displaying verified Indian coastal projects (Sundarbans Mangrove, Bhitarkanika Tidal Wetland, Pichavaram Coastal Lagoon).
+- Ecosystem filter pills (Mangrove, Tidal Wetland, Seagrass Meadow) and dynamic multi-criteria sorting (Price, Remaining Stock, MRV Audit Score).
+- Integrated MRV Dossier drawer displaying Sentinel-2 multispectral metrics, Smithsonian CCN soil cores, and Polygon smart contract bindings.
 
-```
-aegisblue/
-├── docker/                 # Production Dockerfile and Nginx configuration
-│   ├── Dockerfile
-│   └── nginx.conf
-├── docs/                   # Team guides and project documentation
-│   ├── docker_guide.md     # Team Docker integration manual
-│   ├── team_workflow.md    # 4-member role checklist & YouTube tutorials
-│   └── team_workflow.html  # Interactive visual workflow guide
-├── public/                 # Static assets, hero imagery, and icons
-│   └── images/
-├── src/                    # Application source code
-│   ├── components/         # React UI modules for Pillars 1, 2, 3, 4 & Dashboard
-│   ├── data/               # Mangrove GIS boundaries & mock projects
-│   ├── services/           # Satellite auditor, spatial validator, certificate generator
-│   └── types/              # TypeScript interface definitions
-├── docker-compose.yml      # Multi-service container orchestrator
-├── package.json            # Dependencies and scripts
-└── vite.config.ts          # Vite build configuration
-```
+### 2. On-Chain Retire Modal & Token Burn (`src/components/ESGCertificateModal.tsx`)
+- Interactive offset calculator with dynamic tree conservation equivalencies and flight hour offsets.
+- Simulated on-chain token burn with realistic Polygon Amoy testnet latency (Chain ID 80002) and automatic dead address routing (`0x000...dEaD`) to eliminate double-spending risks.
+- Instant high-fidelity visual preview of the minted ESG Certificate of Recognition.
+
+### 3. Verified ESG PDF Generator (`src/services/certificateGenerator.ts`)
+- Automated client-side PDF compilation using `jsPDF` & `qrcode`.
+- Classic ornamental award layout with dual antique gold guilloche filigree frames, arched banner ribbon, calligraphic recipient typography (`Great Vibes`), circular embossed security seal, registry serial box, and scannable verification QR code linking to PolygonScan.
+
+### 4. Enterprise ESG Reporting Dashboard (`src/components/EnterpriseDashboard.tsx`)
+- Executive analytics overview tracking total tCO2e retired, capital deployed, and equivalent habitat sinks.
+- Quarterly retirement trajectory charts and habitat distribution breakdowns.
+- Auditable corporate retirement ledger with direct PolygonScan transaction links and one-click PDF certificate re-downloads.
 
 ---
 
-## 🚀 Quick Start with Docker
+## ≡ƒ¢á∩╕Å Tech Stack
 
-The entire platform is fully containerized with multi-stage builds and Nginx caching:
+- **Framework**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, Vanilla CSS Glassmorphism
+- **PDF & Cryptographic Proofs**: `jspdf`, `qrcode`, `canvas-confetti`
+- **Icons**: `lucide-react`
+- **Fonts**: `Plus Jakarta Sans`, `Rajdhani`, `Cinzel`, `Great Vibes`, `JetBrains Mono`
 
+---
+
+## ≡ƒÜÇ Getting Started
+
+### 1. Clone & Install
 ```bash
-# 1. Clone the repository
 git clone https://github.com/rujopujo/aegisblue.git
 cd aegisblue
-
-# 2. Build and run container
-docker compose up --build -d
-
-# 3. Open in browser
-# Navigate to: http://localhost:3000
-```
-
-To stop the container:
-```bash
-docker compose down
-```
-
----
-
-## 💻 Local Development (Without Docker)
-
-```bash
-# Install dependencies
+git checkout feature/pillar-4-marketplace-esg
 npm install
+```
 
-# Start local Vite development server
+### 2. Run Development Server
+```bash
 npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) (or `http://localhost:5173`) in your browser.
 
-# Open in browser: http://localhost:5173
+### 3. Build for Production
+```bash
+npm run build
 ```
 
 ---
 
-## 👥 Team Carbon Documentation
+## ≡ƒôü Project Structure
 
-For detailed role assignments, YouTube video links, and step-by-step checklists:
-* 📖 **[Team Workflow Guide](docs/team_workflow.md)**
-* 🐳 **[Docker Integration Guide](docs/docker_guide.md)**
-* 🌐 **[Visual Workflow HTML](docs/team_workflow.html)**
+```text
+Γö£ΓöÇΓöÇ src/
+Γöé   Γö£ΓöÇΓöÇ components/
+Γöé   Γöé   Γö£ΓöÇΓöÇ Navbar.tsx                   # Top navigation with Web3 network pill
+Γöé   Γöé   Γö£ΓöÇΓöÇ Pillar4_Marketplace.tsx      # Blue carbon marketplace storefront & MRV drawer
+Γöé   Γöé   Γö£ΓöÇΓöÇ ESGCertificateModal.tsx      # Retire calculator & golden award preview
+Γöé   Γöé   ΓööΓöÇΓöÇ EnterpriseDashboard.tsx      # Corporate ESG analytics & on-chain ledger
+Γöé   Γö£ΓöÇΓöÇ data/
+Γöé   Γöé   ΓööΓöÇΓöÇ mockProjects.ts              # Verified coastal project telemetry
+Γöé   Γö£ΓöÇΓöÇ services/
+Γöé   Γöé   ΓööΓöÇΓöÇ certificateGenerator.ts      # jsPDF engine with dynamic QR code
+Γöé   Γö£ΓöÇΓöÇ types/
+Γöé   Γöé   ΓööΓöÇΓöÇ marketplace.ts               # Strict TypeScript schemas
+Γöé   Γö£ΓöÇΓöÇ App.tsx                          # Root application container & tab router
+Γöé   Γö£ΓöÇΓöÇ index.css                        # Glassmorphism, animations, and design tokens
+Γöé   ΓööΓöÇΓöÇ main.tsx                         # DOM entry point
+Γö£ΓöÇΓöÇ index.html                           # Entry HTML & Google Webfonts
+Γö£ΓöÇΓöÇ package.json                         # Project dependencies & scripts
+Γö£ΓöÇΓöÇ tailwind.config.js                   # Tailwind utility configurations
+Γö£ΓöÇΓöÇ tsconfig.json                        # TypeScript compiler options
+ΓööΓöÇΓöÇ vite.config.ts                       # Vite build configuration
+```
