@@ -110,3 +110,30 @@ def save_retirement(record_dict: Dict[str, Any]):
 
     conn.commit()
     conn.close()
+
+def get_retirement_by_certificate_id(certificate_id: str) -> Optional[Dict[str, Any]]:
+    if not certificate_id or not certificate_id.strip():
+        return None
+    clean_id = certificate_id.strip().upper()
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT payload FROM retirements WHERE UPPER(json_extract(payload, '$.certificateId')) = ?", (clean_id,))
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            return json.loads(row["payload"])
+    except Exception:
+        pass
+
+    cursor.execute("SELECT payload FROM retirements ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    for r in rows:
+        try:
+            data = json.loads(r["payload"])
+            if data.get("certificateId", "").strip().upper() == clean_id:
+                return data
+        except Exception:
+            continue
+    return None

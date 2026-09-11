@@ -17,7 +17,10 @@ interface NavbarProps {
   setActiveTab: (tab: 'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard') => void;
   walletAddress: string;
   isWalletConnected: boolean;
+  isCorrectNetwork?: boolean;
+  isConnectingWallet?: boolean;
   onConnectWallet: () => void;
+  onSwitchNetwork?: () => void;
   totalSequesteredTons: number;
   totalTokensMinted: number;
   totalRetiredTons: number;
@@ -28,7 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   walletAddress,
   isWalletConnected,
+  isCorrectNetwork = true,
+  isConnectingWallet = false,
   onConnectWallet,
+  onSwitchNetwork,
   totalSequesteredTons,
   totalTokensMinted,
   totalRetiredTons,
@@ -213,13 +219,39 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
+          {isWalletConnected && !isCorrectNetwork && (
+            <button
+              onClick={onSwitchNetwork}
+              title="Click to switch your wallet network to Polygon Amoy (Chain ID 80002)"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-300 text-xs font-mono font-semibold shadow-sm transition-all"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+              <span>Switch to Amoy</span>
+            </button>
+          )}
+
           <button
             onClick={onConnectWallet}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#002B49] hover:bg-[#003B66] text-white text-xs font-mono font-semibold shadow-sm transition-all"
+            disabled={isConnectingWallet}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-[#002B49] hover:bg-[#003B66] text-white text-xs font-mono font-semibold shadow-sm transition-all disabled:opacity-75"
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{isWalletConnected ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>
+              {isConnectingWallet
+                ? 'Connecting...'
+                : isWalletConnected && walletAddress
+                ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                : 'Connect Wallet'}
+            </span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isWalletConnected && isCorrectNetwork
+                  ? 'bg-emerald-400 animate-pulse'
+                  : isWalletConnected
+                  ? 'bg-amber-400'
+                  : 'bg-slate-400'
+              }`}
+            ></span>
           </button>
         </div>
       </div>

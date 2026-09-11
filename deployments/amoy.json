@@ -1,0 +1,12 @@
+{
+  "contractName": "AegisBlueCarbonCredit",
+  "contractAddress": "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9",
+  "transactionHash": "0xde0e23de9603431c74340718caa9c0e22abf40ccf688ac4aa56f1716afc1e0aa",
+  "blockNumber": 47235683,
+  "network": "amoy",
+  "chainId": 80002,
+  "deployer": "0x5f05Afd47769c5d5e332b026D33883a004C2cc68",
+  "initialOwner": "0x5f05Afd47769c5d5e332b026D33883a004C2cc68",
+  "initialUri": "https://gateway.pinata.cloud/ipfs/{id}.json",
+  "deployedAt": "2026-09-10T16:30:36.396Z"
+}

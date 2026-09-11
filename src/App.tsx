@@ -7,6 +7,7 @@ import { Pillar3_Tokenization } from './components/Pillar3_Tokenization';
 import { Pillar4_Marketplace } from './components/Pillar4_Marketplace';
 import { EnterpriseDashboard } from './components/EnterpriseDashboard';
 import { ESGCertificateModal } from './components/ESGCertificateModal';
+import { VerificationPage } from './components/VerificationPage';
 import { 
   LatLng, 
   BoundaryCheckResult, 
@@ -17,13 +18,71 @@ import {
 } from './types';
 import { initializeMockProjects, INITIAL_RETIREMENTS } from './data/mockProjects';
 import { apiFetchProjects, apiSaveProject } from './services/apiClient';
+import {
+  POLYGON_AMOY_CONFIG,
+  checkExistingConnection,
+  connectBrowserWallet,
+  switchToPolygonAmoy,
+  subscribeToWalletEvents,
+} from './services/web3Registry';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'pillar1' | 'pillar2' | 'pillar3' | 'pillar4' | 'dashboard'>('home');
+  const [verificationCertId, setVerificationCertId] = useState<string | null>(null);
+
+  // Synchronize browser URL route for /verify/:certificateId
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      const pathname = window.location.pathname;
+      const match = pathname.match(/^\/verify\/([^/]+)/i);
+      if (match && match[1]) {
+        setVerificationCertId(decodeURIComponent(match[1]));
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const verifyParam = params.get('verify');
+      if (verifyParam) {
+        setVerificationCertId(verifyParam);
+        return;
+      }
+
+      const hash = window.location.hash;
+      const hashMatch = hash.match(/^#\/?verify\/([^/]+)/i);
+      if (hashMatch && hashMatch[1]) {
+        setVerificationCertId(decodeURIComponent(hashMatch[1]));
+        return;
+      }
+
+      setVerificationCertId(null);
+    };
+
+    handleUrlRoute();
+    window.addEventListener('popstate', handleUrlRoute);
+    window.addEventListener('hashchange', handleUrlRoute);
+    return () => {
+      window.removeEventListener('popstate', handleUrlRoute);
+      window.removeEventListener('hashchange', handleUrlRoute);
+    };
+  }, []);
+
+  const handleNavigateVerify = (certId: string) => {
+    setVerificationCertId(certId);
+    window.history.pushState({}, '', `/verify/${encodeURIComponent(certId)}`);
+  };
+
+  const handleBackFromVerify = () => {
+    setVerificationCertId(null);
+    window.history.pushState({}, '', '/');
+    setActiveTab('dashboard');
+  };
   
-  // Wallet State
-  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(true);
-  const [walletAddress, setWalletAddress] = useState<string>('0x71C8A932E648B47190F0C523B9921E749a219E34');
+  // Real Web3 Wallet State
+  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
+  const [walletAddress, setWalletAddress] = useState<string>('');
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [isCorrectNetwork, setIsCorrectNetwork] = useState<boolean>(true);
+  const [isConnectingWallet, setIsConnectingWallet] = useState<boolean>(false);
 
   // Multi-Pillar Pipeline State
   const [stage1Project, setStage1Project] = useState<{
@@ -59,17 +118,88 @@ export function App() {
     });
   }, []);
 
+  // Non-intrusive existing connection check and MetaMask event listeners
+  useEffect(() => {
+    checkExistingConnection().then((state) => {
+      if (state) {
+        setIsWalletConnected(true);
+        setWalletAddress(state.address);
+        setChainId(state.chainId);
+        setIsCorrectNetwork(state.isCorrectNetwork);
+      }
+    });
+
+    const unsubscribe = subscribeToWalletEvents(
+      (accounts) => {
+        if (!accounts || accounts.length === 0) {
+          setIsWalletConnected(false);
+          setWalletAddress('');
+          setChainId(null);
+        } else {
+          setIsWalletConnected(true);
+          setWalletAddress(accounts[0]);
+        }
+      },
+      (newChainIdHex) => {
+        const parsedChainId = parseInt(newChainIdHex, 16);
+        setChainId(parsedChainId);
+        setIsCorrectNetwork(parsedChainId === POLYGON_AMOY_CONFIG.chainId);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // ESG Certificate Modal State
   const [selectedRetirement, setSelectedRetirement] = useState<RetirementRecord | null>(null);
   const [isCertModalOpen, setIsCertModalOpen] = useState<boolean>(false);
 
-  // Wallet Connection toggle
-  const handleConnectWallet = () => {
-    if (!isWalletConnected) {
+  // Real MetaMask Connection Handler
+  const handleConnectWallet = async () => {
+    if (isWalletConnected && isCorrectNetwork) {
+      alert(`Connected to Polygon Amoy Testnet (#${chainId || 80002}) with address:\n${walletAddress}`);
+      return;
+    }
+
+    if (isWalletConnected && !isCorrectNetwork) {
+      try {
+        await switchToPolygonAmoy();
+        setIsCorrectNetwork(true);
+        setChainId(POLYGON_AMOY_CONFIG.chainId);
+      } catch (err: any) {
+        alert(`Failed to switch network: ${err?.message || err}`);
+      }
+      return;
+    }
+
+    setIsConnectingWallet(true);
+    try {
+      const state = await connectBrowserWallet();
       setIsWalletConnected(true);
-      setWalletAddress('0x71C8A932E648B47190F0C523B9921E749a219E34');
-    } else {
-      alert(`Connected to Polygon Amoy Testnet (#80002) with address: ${walletAddress}`);
+      setWalletAddress(state.address);
+      setChainId(state.chainId);
+      setIsCorrectNetwork(state.isCorrectNetwork);
+    } catch (err: any) {
+      // User rejected request error code 4001
+      if (err?.code === 4001 || err?.message?.includes('User rejected')) {
+        console.warn('[AegisBlue] User rejected wallet connection request.');
+      } else {
+        alert(err?.message || 'Failed to connect MetaMask wallet.');
+      }
+    } finally {
+      setIsConnectingWallet(false);
+    }
+  };
+
+  const handleSwitchNetwork = async () => {
+    try {
+      await switchToPolygonAmoy();
+      setIsCorrectNetwork(true);
+      setChainId(POLYGON_AMOY_CONFIG.chainId);
+    } catch (err: any) {
+      alert(`Failed to switch network to Polygon Amoy: ${err?.message || err}`);
     }
   };
 
@@ -133,7 +263,7 @@ export function App() {
   const activePillar1Project = stage1Project || {
     name: 'Sundarbans Core Delta Blue Carbon Restoration',
     ngoName: 'Sundarbans Mangrove Climate Alliance (SMCA)',
-    ngoWallet: '0x3B88e63F9D661d9a244C3A73Ec5D875F7925e510',
+    ngoWallet: walletAddress || '0x3B88e63F9D661d9a244C3A73Ec5D875F7925e510',
     ngoRegistrationNo: 'WB-NGO-ENV-2024-9941',
     locationName: 'Sundarbans Biosphere Reserve, West Bengal',
     coordinates: [
@@ -155,6 +285,15 @@ export function App() {
     },
   };
 
+  if (verificationCertId) {
+    return (
+      <VerificationPage
+        certificateId={verificationCertId}
+        onBackToApp={handleBackFromVerify}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
       {/* Clean Institutional Top Header */}
@@ -163,7 +302,10 @@ export function App() {
         setActiveTab={setActiveTab}
         walletAddress={walletAddress}
         isWalletConnected={isWalletConnected}
+        isCorrectNetwork={isCorrectNetwork}
+        isConnectingWallet={isConnectingWallet}
         onConnectWallet={handleConnectWallet}
+        onSwitchNetwork={handleSwitchNetwork}
         totalSequesteredTons={totalSequesteredTons}
         totalTokensMinted={totalTokensMinted}
         totalRetiredTons={totalRetiredTons}
@@ -256,6 +398,7 @@ export function App() {
               retirements={retirements}
               projects={projects}
               onOpenCertificate={handleOpenCertificate}
+              onNavigateVerify={handleNavigateVerify}
             />
           </div>
         )}
@@ -267,6 +410,7 @@ export function App() {
         project={projects.find((p) => p.id === selectedRetirement?.projectId)}
         isOpen={isCertModalOpen}
         onClose={() => setIsCertModalOpen(false)}
+        onNavigateVerify={handleNavigateVerify}
       />
 
       {/* Institutional Editorial Footer */}

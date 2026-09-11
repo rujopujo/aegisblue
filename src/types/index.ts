@@ -134,6 +134,8 @@ export interface TokenizedProject {
     pricePerTonUSD: number;
     txHash: string;
     blockNumber: number;
+    registrationTxHash?: string;
+    registrationBlockNumber?: number;
     mintedAt: string;
   };
   coBenefits: string[];
@@ -154,4 +156,32 @@ export interface RetirementRecord {
   retiredAt: string;
   certificateId: string;
   ipfsCertificateCid: string;
+  tokenId?: string;
+  contractAddress?: string;
+  network?: string;
 }
+
+export interface CertificateVerificationResult {
+  status: 'VERIFIED_ON_CHAIN' | 'OFF_CHAIN_RECORD' | 'RECORD_FOUND_RPC_UNAVAILABLE' | 'NOT_FOUND' | 'ERROR';
+  certificateId: string;
+  record?: RetirementRecord;
+  isBlockchainVerified: boolean;
+  network: string;
+  contractAddress: string;
+  explorerUrl?: string;
+  verifiedAt: string;
+  onChainVerification?: {
+    verified: boolean;
+    status: 'VERIFIED_ON_CHAIN' | 'RPC_UNAVAILABLE' | 'NOT_FOUND' | 'REVERTED' | 'EVENT_MISMATCH';
+    blockNumber?: number;
+    confirmations?: number;
+    eventDetails?: {
+      account: string;
+      tokenId: string;
+      amount: number;
+    };
+    errorMessage?: string;
+  };
+  error?: string;
+}
+

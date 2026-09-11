@@ -42,3 +42,9 @@ venv/
 .venv/
 *.db
 *.sqlite3
+
+# Hardhat
+artifacts/
+cache/
+typechain/
+typechain-types/

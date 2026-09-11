@@ -61,7 +61,7 @@ export function initializeMockProjects(): TokenizedProject[] {
   const picAudit = computeCarbonAudit(picSpectral, 180, 0.82);
   const picBoundary = validateBoundaryAgainstGMW(picCoords);
   const picIpfs = createIPFSPackage(
-    'PROJ-PIC-2026-02',
+    'AEGIS-PICHAVARAMESTUAR-180',
     'Pichavaram Estuarine Rhizophora Expansion',
     'Tamil Nadu Coastal Ecology Foundation',
     picCoords,
@@ -70,12 +70,14 @@ export function initializeMockProjects(): TokenizedProject[] {
     picSpectral,
     picAudit
   );
+  picIpfs.cid = 'bafkreid3n64zywg4nud5z3oq2vla5fuiwa75pszuxpv7mjx4w3cxs5ezzq';
+  picIpfs.gatewayUrl = 'https://gateway.pinata.cloud/ipfs/bafkreid3n64zywg4nud5z3oq2vla5fuiwa75pszuxpv7mjx4w3cxs5ezzq';
 
   const proj2 = mintCarbonTokens({
-    id: 'PROJ-PIC-2026-02',
+    id: 'AEGIS-PICHAVARAMESTUAR-180',
     name: 'Pichavaram Estuarine Rhizophora Expansion',
     ngoName: 'Tamil Nadu Coastal Ecology Foundation',
-    ngoWallet: '0x99A41eB90bE87515F05a0d6A739cD04C5A14bF91',
+    ngoWallet: '0x5f05Afd47769c5d5e332b026D33883a004C2cc68',
     ngoRegistrationNo: 'TN-COAST-SOC-2019-4412',
     locationName: 'Pichavaram Mangrove Wetlands, Cuddalore, TN',
     coordinates: picCoords,
@@ -91,6 +93,15 @@ export function initializeMockProjects(): TokenizedProject[] {
       'Community Nursery & Eco-Tourism Stewardship'
     ]
   });
+
+  // Reference the verified on-chain Polygon Amoy ERC-1155 token
+  proj2.tokenization.tokenId = '7300511014531487208209184491691875089324748676569431105539752191596868391902';
+  proj2.tokenization.totalMinted = 100;
+  proj2.tokenization.availableCredits = 100;
+  proj2.tokenization.txHash = '0x5deb7af620ac53bad6fa6d9acb611605f7cab71ce1bb74b830de71b698c0217d';
+  proj2.tokenization.registrationTxHash = '0xb2942f936e9920acab30dea9f5bba856067e85949017fbb736b8662f605f1b90';
+  proj2.tokenization.blockNumber = 47242269;
+
 
   // Project 3: Bhitarkanika Delta Blue Carbon Project
   const bhiCoords: [number, number][] = [

@@ -151,6 +151,19 @@ class RetirementRecord(BaseModel):
     retiredAt: str
     certificateId: str
     ipfsCertificateCid: str
+    tokenId: Optional[str] = None
+    contractAddress: Optional[str] = "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9"
+    network: Optional[str] = "Polygon Amoy"
+
+class CertificateVerificationResponse(BaseModel):
+    status: str
+    certificateId: str
+    record: RetirementRecord
+    isBlockchainVerified: bool
+    network: str = "Polygon Amoy"
+    contractAddress: str = "0x4512a958E2F6a1ff0b6cc0F2F24a50C583A842d9"
+    explorerUrl: Optional[str] = None
+    verifiedAt: str
 
 class RetirementRequest(BaseModel):
     projectId: str
@@ -158,3 +171,37 @@ class RetirementRequest(BaseModel):
     companyName: str
     companyWallet: str
     purpose: str
+    tokenId: Optional[str] = None
+    transactionHash: Optional[str] = None
+    blockNumber: Optional[int] = None
+    retiredAt: Optional[str] = None
+    certificateId: Optional[str] = None
+    ipfsCertificateCid: Optional[str] = None
+
+
+class AuditDossierPinRequest(BaseModel):
+    projectId: str
+    auditHash: str
+    totalCredits: float
+    projectName: Optional[str] = "Blue Carbon Restoration Project"
+    ngoName: Optional[str] = None
+    locationName: Optional[str] = None
+    areaHectares: Optional[float] = None
+    coordinates: Optional[List[List[float]]] = None
+    spectralData: Optional[SatelliteBandData] = None
+    carbonMetrics: Optional[CarbonAuditMetrics] = None
+    nearestCcnCore: Optional[CcnCoreSampleInfo] = None
+    dossier: Optional[Dict[str, Any]] = None
+    customMetadata: Optional[Dict[str, Any]] = None
+
+class AuditDossierPinResponse(BaseModel):
+    status: str = "SUCCESS"
+    cid: str
+    gatewayUrl: str
+    pinSize: int
+    timestamp: str
+    projectId: str
+    auditHash: str
+    totalCredits: float
+    dossier: Dict[str, Any]
+
