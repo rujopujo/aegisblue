@@ -1,6 +1,5 @@
 # 🌊 AegisBlue — Technology Stack & Architecture Specification
 > **Platform:** AegisBlue • Decentralized Blue Carbon MRV & Tokenization Engine  
-> **Event:** Smart India Hackathon (SIH 2026) • Team Carbon  
 > **Repository:** `rujopujo/aegisblue`  
 
 ---

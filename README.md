@@ -1,5 +1,5 @@
 # 🌊 AegisBlue — Decentralized Blue Carbon MRV & Tokenization Engine
-> **Smart India Hackathon (SIH 2026)** &bull; *Team Carbon*
+> Automated Digital MRV, Ecological Agronomy Telemetry & Web3 Carbon Registry
 
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
