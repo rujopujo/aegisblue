@@ -17,7 +17,7 @@ import {
   RetirementRecord 
 } from './types';
 import { initializeMockProjects, INITIAL_RETIREMENTS } from './data/mockProjects';
-import { apiFetchProjects, apiSaveProject } from './services/apiClient';
+import { apiFetchProjects, apiSaveProject, apiFetchRetirements } from './services/apiClient';
 import {
   POLYGON_AMOY_CONFIG,
   checkExistingConnection,
@@ -114,6 +114,12 @@ export function App() {
       } else if (source === 'FASTAPI' && (!serverProjects || serverProjects.length === 0)) {
         // Seed default projects to backend SQLite database
         initial.forEach((p) => apiSaveProject(p));
+      }
+    });
+
+    apiFetchRetirements(INITIAL_RETIREMENTS).then(({ retirements: serverRetirements }) => {
+      if (serverRetirements && serverRetirements.length > 0) {
+        setRetirements(serverRetirements);
       }
     });
   }, []);
